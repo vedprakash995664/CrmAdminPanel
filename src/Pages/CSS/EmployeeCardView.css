@@ -1,0 +1,96 @@
+/* EmployeeCardView.css */
+
+.employee-cards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Responsive grid */
+    gap: 15px;
+    margin: 20px;
+}
+@media(max-width:468px){
+    .p-dialog{
+        width: 100%;
+    }
+}
+.employee-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    background-color: #fff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.employee-card-header {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.employee-card-body {
+    margin-bottom: 10px;
+}
+
+.employee-card-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 5px;
+}
+
+.action-button {
+    padding: 6px 10px;
+    font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+    /* For tablets and mobile devices */
+    .employee-cards-container {
+        grid-template-columns: 1fr; /* Single column layout */
+    }
+
+    .employee-card {
+        padding: 10px;
+    }
+
+    .employee-card-header {
+        font-size: 1.1rem;
+    }
+
+    .employee-card-body {
+        font-size: 0.875rem;
+    }
+
+    .employee-card-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .action-button {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    /* For mobile devices */
+    .employee-card-header {
+        font-size: 1rem;
+    }
+
+    .employee-card-body {
+        font-size: 0.8rem;
+    }
+
+    .employee-card-actions {
+        flex-direction: column;
+    }
+
+    .action-button {
+        width: 100%;
+    }
+
+    .p-dialog {
+        width: 90vw; /* Modal width for mobile */
+    }
+
+    .p-inputtext {
+        width: 100%;
+    }
+}
