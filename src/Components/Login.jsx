@@ -11,35 +11,40 @@ const Login = () => {
   const [error, setError] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [focusedField, setFocusedField] = useState("");
+  const [loading, setLoading] = useState(false); // New loading state
   const navigate = useNavigate();
-  const APi_Url=import.meta.env.VITE_API_URL
+  const APi_Url = import.meta.env.VITE_API_URL;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!email || !password) {
       setError("All fields are required.");
       toast.error("All fields are required."); // Toast for error
     } else {
       try {
+        setLoading(true); // Start loading state
         // Call your API endpoint using axios
         const response = await axios.post(`${APi_Url}/digicoder/crm/api/v1/admin/login`, {
           email: email,
           password: password
         });
+
         if (response.status === 200) {
           setError("");
-          toast.success("Logged in successfully!"); 
+          toast.success("Logged in successfully!");
           const token = 'dvhdscvydsyjucbvdsjbvju';;
-          const adminId=response.data.existUser._id;
+          const adminId = response.data.existUser._id;
           sessionStorage.setItem("Token", token);
-          sessionStorage.setItem("AdminId",adminId)
+          sessionStorage.setItem("AdminId", adminId);
           setTimeout(() => {
             setEmail("");
             setPassword("");
+            setLoading(false); // Stop loading state after success
             navigate('/dashboard');
           }, 500); 
         }
       } catch (error) {
+        setLoading(false); // Stop loading state if there's an error
         if (error.response) {
           // If the error response is from the server
           setError(error.response.data.message || "Invalid email or password.");
@@ -119,7 +124,17 @@ const Login = () => {
           </div>
           <br />
           {error && <div className="error-message">{error}</div>}
-          <button type="submit" className="submit-btn">Login</button>
+          <button 
+            type="submit" 
+            className="submit-btn" 
+            disabled={loading} // Disable button during loading
+          >
+            {loading ? (
+              <div className="spinner"></div> // Loader Spinner
+            ) : (
+              "Login"
+            )}
+          </button>
         </form>
       </div>
 
