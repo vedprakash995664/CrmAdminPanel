@@ -6,6 +6,9 @@
     justify-content: end;
     align-items: center;
 }
+.modal-backdrop{
+    z-index: 1;
+}
 .lead-Add-btn{
     display: flex;
     align-items: center;

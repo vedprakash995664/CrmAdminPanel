@@ -12,6 +12,7 @@ import axios from 'axios';
 
 function Sources() {
   const [show, setShow] = useState(false);
+  const APi_Url = import.meta.env.VITE_API_URL;
   const [SourcesText, setSourcesText] = useState('');
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -47,7 +48,7 @@ function Sources() {
     try {
       const AdminId = sessionStorage.getItem('AdminId');
       const userType = 'Admin';
-      const apiUrl = `http://localhost:3000/digicoder/crm/api/v1/leadSources/add/${AdminId}`;
+      const apiUrl = `${APi_Url}/digicoder/crm/api/v1/leadSources/add/${AdminId}`;
       await axios.post(apiUrl, { SourcesText, userType });
       toast.success('Source added successfully');
       
@@ -70,7 +71,7 @@ function Sources() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          const apiUrl = `http://localhost:3000/digicoder/crm/api/v1/leadSources/delete/${rowData._id}`;
+          const apiUrl = `${APi_Url}/digicoder/crm/api/v1/leadSources/delete/${rowData._id}`;
           await axios.delete(apiUrl);
           toast.success('Source deleted successfully');
           dispatch(fetchSources());

@@ -13,6 +13,7 @@ import Swal from 'sweetalert2';
 function LeadStatus() {  
   const [show, setShow] = useState(false);
   const [statusText,setStatusText]=useState();
+  const APi_Url = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const LeadStatusData = useSelector((state) => state.leads.LeadStatus); 
@@ -43,7 +44,7 @@ function LeadStatus() {
       const AdminId = sessionStorage.getItem('AdminId');
       console.log(AdminId);
       const userType = "Admin";
-      const apiUrl = `http://localhost:3000/digicoder/crm/api/v1/leadstatus/add/${AdminId}`;
+      const apiUrl = `${APi_Url}/digicoder/crm/api/v1/leadstatus/add/${AdminId}`;
       // Sending POST request with priorityText
       const response = await axios.post(apiUrl, { statusText, userType });
       console.log(response);
@@ -74,7 +75,7 @@ function LeadStatus() {
       cancelButtonText: 'Cancel'
     }).then(async(result) => {
       if (result.isConfirmed) {
-        const apiUrl = `http://localhost:3000/digicoder/crm/api/v1/leadstatus/delete/${rowData._id}`;
+        const apiUrl = `${APi_Url}/digicoder/crm/api/v1/leadstatus/delete/${rowData._id}`;
         await axios.delete(apiUrl)
           .then(() => {
             

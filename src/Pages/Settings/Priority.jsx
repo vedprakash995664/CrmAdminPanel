@@ -17,6 +17,7 @@ function Priority() {
   const dispatch = useDispatch();
   const priorityData = useSelector((state) => state.leads.Priority); // Assuming this is an array of priority objects
   
+  const APi_Url = import.meta.env.VITE_API_URL;
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
 
@@ -41,7 +42,7 @@ function Priority() {
     try {
       const AdminId = sessionStorage.getItem('AdminId');
       const userType = "Admin";
-      const apiUrl = `http://localhost:3000/digicoder/crm/api/v1/priority/add/${AdminId}`;
+      const apiUrl = `${APi_Url}/digicoder/crm/api/v1/priority/add/${AdminId}`;
       
       const response = await axios.post(apiUrl, { priorityText, userType });
 
@@ -66,7 +67,7 @@ function Priority() {
       cancelButtonText: 'Cancel'
     }).then(async (result) => {
       if (result.isConfirmed) {
-        const apiUrl = `http://localhost:3000/digicoder/crm/api/v1/priority/delete/${rowData._id}`;
+        const apiUrl = `${APi_Url}/digicoder/crm/api/v1/priority/delete/${rowData._id}`;
         
         await axios.delete(apiUrl)
           .then(() => {

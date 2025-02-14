@@ -13,7 +13,7 @@ import Swal from 'sweetalert2';
 import axios from 'axios';
 
 function Tag() {
-  const [sidebarActive, setSidebarActive] = useState(false);
+  const APi_Url = import.meta.env.VITE_API_URL;
   const [newTag, setNewTag] = useState('');
   const [show, setShow] = useState(false);
   const dispatch = useDispatch();
@@ -47,7 +47,7 @@ function Tag() {
     try {
       const AdminId = sessionStorage.getItem('AdminId');
       const userType = "Admin";
-      const apiUrl = `http://localhost:3000/digicoder/crm/api/v1/tags/add/${AdminId}`;
+      const apiUrl = `${APi_Url}/digicoder/crm/api/v1/tags/add/${AdminId}`;
       
       const response = await axios.post(apiUrl, { tagName: newTag, userType });
       toast.success('Tag saved successfully');
@@ -98,7 +98,7 @@ function Tag() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          const apiUrl = `http://localhost:3000/digicoder/crm/api/v1/tags/delete/${rowData._id}`;
+          const apiUrl = `${APi_Url}/digicoder/crm/api/v1/tags/delete/${rowData._id}`;
           await axios.delete(apiUrl);
           toast.success('Tag deleted successfully');
           dispatch(fetchTags()); // Refresh the list after deletion
