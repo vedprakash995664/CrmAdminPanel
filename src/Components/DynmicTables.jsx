@@ -194,7 +194,7 @@ export default function DynamicTable({ lead, tableTitle }) {
                                 checked={selectedRows.includes(rowData)}
                                 onChange={(e) => handleCheckboxChange(e, rowData)}
                             />
-                            {first + rowIndex + 1}  {/* Adjusting index for pagination */}
+                            {rowIndex + 1}  {/* Adjusting index for pagination */}
                         </div>
                     )}
                     style={{ width: '10%' }}

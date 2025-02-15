@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Dashboard from '../Components/Dashboard';
 import DynamicTable from '../Components/DynmicTables';
 import DynamicCard from '../Components/DynamicCard';
@@ -9,11 +9,12 @@ import * as XLSX from 'xlsx'; // Import the xlsx library
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchLeads, fetchPriority, fetchSources } from '../Features/LeadSlice';
+import { fetchEmployee, fetchLeads, fetchPriority, fetchSources } from '../Features/LeadSlice';
 import axios from 'axios';
 import DeletedDynamicTable from '../Components/DeletedDynamicTable';
 import DeletedDynamicCard from '../Components/DeletedDynamicCard';
-
+import { Toast } from 'primereact/toast';
+import { toast } from 'react-toastify';
 function Leads() {
   const [leadData, setLeadData] = useState([]);
   const [tableTitle, setTableTitle] = useState('Leads');
@@ -24,15 +25,20 @@ function Leads() {
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false); // Loading state for file processing
   const [selectedPriority, setSelectedPriority] = useState(null); // State for selected priority
-  const [selectedSource, setSelectedSource] = useState(null); // State for selected source
+  const [selectedSource, setSelectedSource] = useState(null); 
+  const [selectedEmployee, setSelectedEmployee] = useState(null); 
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
+  const toast = useRef(null);
   const dispatch = useDispatch();
   const priorityData = useSelector((state) => state.leads.Priority);
   const sourcesData = useSelector((state) => state.leads.leadSources);
-
+ const employeeData = useSelector((state) => state.leads.Employee || []).filter((item) => item?.blocked === false);
+//  console.log(employeeData);
+ 
   const [priorityOptions, setPriorityOptions] = useState([]);
   const [sourcesOptions, setSourcesOptions] = useState([]);
+  const [employee, setEmployee] = useState([]);
 
   useEffect(() => {
     if (sourcesData && Array.isArray(sourcesData)) {
@@ -45,9 +51,32 @@ function Leads() {
     }
   }, [sourcesData]);
 
+
+  useEffect(() => {
+    if (employeeData && Array.isArray(employeeData)) {
+      setEmployee(
+        employeeData.map((employee) => ({
+          label: `${employee.empName}`,
+          value: employee._id
+        }))
+      );
+    }
+  }, [employeeData]);
+
+  useEffect(() => {
+    if (priorityData && Array.isArray(priorityData)) {
+      setPriorityOptions(
+        priorityData.map((priority) => ({
+          label: priority.priorityText,
+          value: priority.priorityText
+        }))
+      );
+    }
+  }, [priorityData]);
   useEffect(() => {
     dispatch(fetchPriority());
     dispatch(fetchSources());
+    dispatch(fetchEmployee())
   }, [dispatch]);
 
   useEffect(() => {
@@ -120,34 +149,60 @@ function Leads() {
 
   const handlebulkUpload = async () => {
     console.log(selectedPriority);
-    console.log(selectedSource);
-    console.log(leadData);
+
+    if (!selectedSource || !selectedPriority) {
+      toast.current.show({
+        severity: 'warn',
+        summary: 'Validation Warning',
+        detail: 'Please select both Source and Priority.',
+        life: 3000,
+      });
+      return;
+    }
 
     leadData.forEach(lead => {
-      lead.priority = selectedPriority; 
-      lead.sources=selectedSource
+      lead.priority = selectedPriority;
+      lead.sources = selectedSource;
+      lead.leadAssignedTo = selectedEmployee;
     });
-  
+
     console.log(leadData);
+
     try {
-        const AdminId = sessionStorage.getItem("AdminId");
-        const response = await axios.post(`${APi_Url}/digicoder/crm/api/v1/lead/addmany/${AdminId}`, {
-          leadsArray: leadData,
-          userType: 'Admin', // Adjust this based on your requirement (Admin or Employee)
+      const AdminId = sessionStorage.getItem("AdminId");
+      const response = await axios.post(`${APi_Url}/digicoder/crm/api/v1/lead/addmany/${AdminId}`, {
+        leadsArray: leadData,
+        userType: 'Admin',
+      });
+
+      // Handle the response
+      if (response.data.success) {
+        toast.current.show({  
+          severity: 'success',
+          summary: 'Success',
+          detail: 'Leads added successfully.',
+          life: 3000,
         });
-  
-        // Handle the response
-        if (response.data.success) {
-          console.log("Leads added successfully:", response.data.leads);
-          window.location.reload();
-        } else {
-          console.warn(response.data.message);
-        }
-      } catch (error) {
-        console.error("Error adding leads:", error);
-        alert("There was an error uploading the file. Please try again.");
+        window.location.reload();
+      } else {
+        console.warn(response.data.message);
+        toast.current.show({
+          severity: 'error',
+          summary: 'Error',
+          detail: response.data.message || 'Something went wrong.',
+          life: 3000,
+        });
       }
-  }
+    } catch (error) {
+      console.error("Error adding leads:", error);
+      toast.current.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'There was an error uploading the leads. Please try again.',
+        life: 3000,
+      });
+    }
+  };
   
 
   // Download sample file
@@ -169,8 +224,15 @@ function Leads() {
     setSelectedSource(e.value);
   };
 
+  
+  const handleEmployeeChange = (e) => {
+    setSelectedEmployee(e.value);
+  };
+
+
   return (
     <div>
+      <Toast ref={toast} />
       <Dashboard active={'leads'}>
         <div className="content">
           <div className="lead-header">
@@ -226,7 +288,8 @@ function Leads() {
                   border: "none",
                   backgroundColor: "#3454D1",
                   color: "white",
-                  borderRadius: "5px"
+                  borderRadius: "5px",
+                  width:"50%"
                 }}
                 onClick={() => document.getElementById('import-excel').click()}
               >
@@ -238,14 +301,15 @@ function Leads() {
                   border: "none",
                   backgroundColor: "#FD1E20",
                   color: "white",
-                  borderRadius: "5px"
+                  borderRadius: "5px",
+                  width:"50%"
                 }}
                 onClick={handleDownload}
               >
                 Download Sample File
               </button><br />
             </div><br />
-            <div style={{ display: "flex", justifyContent: "space-around", gap: "10px" }}>
+            <div className='dropdown-option'>
 
               {/* Set zIndex higher on Dropdown to ensure it appears above the Modal */}
               <Dropdown
@@ -258,7 +322,7 @@ function Leads() {
                 optionValue="value"
                 placeholder="Select priority"
                 className="p-dropdown p-component"
-                
+                required
               />
 
               <Dropdown
@@ -270,10 +334,23 @@ function Leads() {
                 optionLabel="value"
                 placeholder="Select source"
                 className="p-dropdown p-component"
-                
+                required
               />
             </div><br />
-            <button onClick={()=>handlebulkUpload()}>Save</button>
+            <div style={{display:"flex", gap:"10px"}}>
+            <Dropdown
+                id="sources"
+                name="sources"
+                value={selectedEmployee}
+                options={employee}
+                onChange={handleEmployeeChange}
+                optionLabel="label"
+                placeholder="Select source"
+                className="p-dropdown p-component"
+                style={{width:"50%"}}
+              />
+            </div><br />
+            <div style={{display:"flex", alignItems:"center", justifyContent:"center"}}><button onClick={()=>handlebulkUpload()} className='saveBulk'>Add Leads</button></div>
           </Modal.Body>
           <Modal.Footer>
             <Button variant="secondary" onClick={handleClose}>
@@ -281,7 +358,7 @@ function Leads() {
             </Button>
           </Modal.Footer>
         </Modal>
-
+        
       </Dashboard>
     </div>
   );
