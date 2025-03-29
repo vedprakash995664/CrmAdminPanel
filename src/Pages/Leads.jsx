@@ -64,7 +64,7 @@ function Leads() {
         }))
       );
     }
-  }, [employeeData]);
+  }, []);
 
   useEffect(() => {
     if (priorityData && Array.isArray(priorityData)) {
