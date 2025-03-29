@@ -11,7 +11,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchPriority, fetchSources } from '../Features/LeadSlice';
 
 const LeadForm = ({ isOpen, onClose, title, buttonTitle, leadData }) => {
-  const APi_Url=import.meta.env.VITE_API_URL
+  const APi_Url = import.meta.env.VITE_API_URL;
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -25,6 +25,7 @@ const LeadForm = ({ isOpen, onClose, title, buttonTitle, leadData }) => {
 
   const [priorityOptions, setPriorityOptions] = useState([]);
   const [sourcesOptions, setSourcesOptions] = useState([]);
+  const [loading, setLoading] = useState(false); // Add loading state
 
   useEffect(() => {
     dispatch(fetchPriority());
@@ -53,17 +54,6 @@ const LeadForm = ({ isOpen, onClose, title, buttonTitle, leadData }) => {
     }
   }, [sourcesData]);
 
-  useEffect(() => {
-    if (leadData) {
-      setFormData({
-        name: leadData.name || '',
-        phone: leadData.phone || '',
-        priority: leadData.priority || '',
-        sources: leadData.source || ''
-      });
-    }
-  }, [leadData]);
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prevState => ({
@@ -74,13 +64,15 @@ const LeadForm = ({ isOpen, onClose, title, buttonTitle, leadData }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
-    
+
     const phoneRegex = /^[6-9][0-9]{9}$/;
     if (!phoneRegex.test(formData.phone)) {
       toast.error('Please enter a valid mobile number');
       return;
     }
+
+    setLoading(true); // Start loader
+
     try {
       const AdminId = sessionStorage.getItem("AdminId");
       const response = await axios.post(`${APi_Url}/digicoder/crm/api/v1/lead/add/${AdminId}`, formData, {
@@ -88,7 +80,7 @@ const LeadForm = ({ isOpen, onClose, title, buttonTitle, leadData }) => {
           'Content-Type': 'application/json',
         },
       });
-  
+
       if (response.status === 201) {
         toast.success('Lead added successfully!');
         onClose();
@@ -99,9 +91,10 @@ const LeadForm = ({ isOpen, onClose, title, buttonTitle, leadData }) => {
     } catch (error) {
       console.error('Error adding lead:', error);
       toast.error('Failed to add lead');
+    } finally {
+      setLoading(false); // Stop loader
     }
   };
-  
 
   return (
     <Dialog 
@@ -110,10 +103,21 @@ const LeadForm = ({ isOpen, onClose, title, buttonTitle, leadData }) => {
       onHide={onClose}
       className='leadFormOuter'
       footer={
-        <>
-          <Button label="Close" icon="pi pi-times" onClick={onClose} className="p-button-text p-button-rounded" />
-          <Button label={buttonTitle} icon="pi pi-check" onClick={handleSubmit} className="p-button-rounded p-button-success" />
-        </>
+        <footer>
+          <Button 
+            label="Close" 
+            icon="pi pi-times" 
+            onClick={onClose} 
+            className="p-button-text p-button-rounded" 
+          />
+          <Button 
+            label={buttonTitle} 
+            icon="pi pi-check" 
+            onClick={handleSubmit} 
+            className={`p-button-rounded p-button-success ${loading ? 'p-button-loading' : ''}`} 
+            loading={loading} // Loading prop for loader
+          />
+        </footer>
       }
     >
       <form onSubmit={handleSubmit}>

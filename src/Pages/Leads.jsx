@@ -12,9 +12,11 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchEmployee, fetchLeads, fetchPriority, fetchSources } from '../Features/LeadSlice';
 import axios from 'axios';
 import DeletedDynamicTable from '../Components/DeletedDynamicTable';
+import { MultiSelect } from 'primereact/multiselect';
 import DeletedDynamicCard from '../Components/DeletedDynamicCard';
 import { Toast } from 'primereact/toast';
 import { toast } from 'react-toastify';
+
 function Leads() {
   const [leadData, setLeadData] = useState([]);
   const [tableTitle, setTableTitle] = useState('Leads');
@@ -24,18 +26,20 @@ function Leads() {
   const [fileData, setFileData] = useState([]);
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false); // Loading state for file processing
+  const [isUploading, setIsUploading] = useState(false); // New state for upload button loading
   const [selectedPriority, setSelectedPriority] = useState(null); // State for selected priority
-  const [selectedSource, setSelectedSource] = useState(null); 
-  const [selectedEmployee, setSelectedEmployee] = useState(null); 
+  const [selectedSource, setSelectedSource] = useState(null);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [selectedTags, setSelectedTags] = useState([]);
+  const tagData = useSelector((state) => state.leads.tag);
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
   const toast = useRef(null);
   const dispatch = useDispatch();
   const priorityData = useSelector((state) => state.leads.Priority);
   const sourcesData = useSelector((state) => state.leads.leadSources);
- const employeeData = useSelector((state) => state.leads.Employee || []).filter((item) => item?.blocked === false);
-//  console.log(employeeData);
- 
+  const employeeData = useSelector((state) => state.leads.Employee || []).filter((item) => item?.blocked === false);
+
   const [priorityOptions, setPriorityOptions] = useState([]);
   const [sourcesOptions, setSourcesOptions] = useState([]);
   const [employee, setEmployee] = useState([]);
@@ -50,7 +54,6 @@ function Leads() {
       );
     }
   }, [sourcesData]);
-
 
   useEffect(() => {
     if (employeeData && Array.isArray(employeeData)) {
@@ -73,22 +76,12 @@ function Leads() {
       );
     }
   }, [priorityData]);
+
   useEffect(() => {
     dispatch(fetchPriority());
     dispatch(fetchSources());
-    dispatch(fetchEmployee())
+    dispatch(fetchEmployee());
   }, [dispatch]);
-
-  useEffect(() => {
-    if (priorityData && Array.isArray(priorityData)) {
-      setPriorityOptions(
-        priorityData.map((priority) => ({
-          label: priority.priorityText,
-          value: priority.priorityText
-        }))
-      );
-    }
-  }, [priorityData]);
 
   const APi_Url = import.meta.env.VITE_API_URL;
 
@@ -120,7 +113,7 @@ function Leads() {
 
     if (file) {
       const reader = new FileReader();
-      reader.onload =(evt) => {
+      reader.onload = (evt) => {
         const arrayBuffer = evt.target.result;
         const wb = XLSX.read(arrayBuffer, { type: 'array' });
         const ws = wb.Sheets[wb.SheetNames[0]];
@@ -129,10 +122,6 @@ function Leads() {
         if (data.length > 0) {
           // Append the Excel data to the existing lead data
           setLeadData((prevData) => [...prevData, ...data]);
-          
-
-          // Send the data to the backend via POST request
-         
         } else {
           console.warn("No data found in the uploaded Excel file.");
         }
@@ -160,10 +149,14 @@ function Leads() {
       return;
     }
 
+    // Set uploading state to true to show loader
+    setIsUploading(true);
+
     leadData.forEach(lead => {
       lead.priority = selectedPriority;
       lead.sources = selectedSource;
       lead.leadAssignedTo = selectedEmployee;
+      lead.tags = selectedTags;
     });
 
     console.log(leadData);
@@ -177,7 +170,7 @@ function Leads() {
 
       // Handle the response
       if (response.data.success) {
-        toast.current.show({  
+        toast.current.show({
           severity: 'success',
           summary: 'Success',
           detail: 'Leads added successfully.',
@@ -192,6 +185,7 @@ function Leads() {
           detail: response.data.message || 'Something went wrong.',
           life: 3000,
         });
+        setIsUploading(false); // Stop loading on error
       }
     } catch (error) {
       console.error("Error adding leads:", error);
@@ -201,9 +195,9 @@ function Leads() {
         detail: 'There was an error uploading the leads. Please try again.',
         life: 3000,
       });
+      setIsUploading(false); // Stop loading on error
     }
   };
-  
 
   // Download sample file
   const handleDownload = () => {
@@ -224,11 +218,9 @@ function Leads() {
     setSelectedSource(e.value);
   };
 
-  
   const handleEmployeeChange = (e) => {
     setSelectedEmployee(e.value);
   };
-
 
   return (
     <div>
@@ -275,7 +267,7 @@ function Leads() {
         <Modal
           show={show}
           onHide={handleClose}
-          style={{zIndex:999}}
+          style={{ zIndex: 999 }}
         >
           <Modal.Header closeButton>
             <Modal.Title>Import/Download Leads</Modal.Title>
@@ -289,7 +281,7 @@ function Leads() {
                   backgroundColor: "#3454D1",
                   color: "white",
                   borderRadius: "5px",
-                  width:"50%"
+                  width: "50%"
                 }}
                 onClick={() => document.getElementById('import-excel').click()}
               >
@@ -302,7 +294,7 @@ function Leads() {
                   backgroundColor: "#FD1E20",
                   color: "white",
                   borderRadius: "5px",
-                  width:"50%"
+                  width: "50%"
                 }}
                 onClick={handleDownload}
               >
@@ -337,28 +329,68 @@ function Leads() {
                 required
               />
             </div><br />
-            <div style={{display:"flex", gap:"10px"}}>
-            <Dropdown
+            <div style={{ display: "flex", gap: "10px" }}>
+              <Dropdown
                 id="sources"
                 name="sources"
                 value={selectedEmployee}
                 options={employee}
                 onChange={handleEmployeeChange}
                 optionLabel="label"
-                placeholder="Select source"
+                placeholder="Select Employee"
                 className="p-dropdown p-component"
-                style={{width:"50%"}}
+                style={{ width: "50%" }}
+              />
+              <MultiSelect
+                id="tags"
+                name="tags"
+                value={selectedTags}
+                options={tagData.map((tag) => ({
+                  label: tag.tagName, // Display text
+                  value: tag.tagName // Unique identifier
+                }))}
+                onChange={(e) => setSelectedTags(e.value)}
+                placeholder="Select tags"
+                className="p-dropdown p-component"
+                style={{ width: '50%' }}
               />
             </div><br />
-            <div style={{display:"flex", alignItems:"center", justifyContent:"center"}}><button onClick={()=>handlebulkUpload()} className='saveBulk'>Add Leads</button></div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <button 
+                onClick={() => handlebulkUpload()} 
+                className='saveBulk'
+                disabled={isUploading}
+              >
+                {isUploading ? (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px" }}>
+                    <div className="spinner" style={{
+                      width: "20px",
+                      height: "20px",
+                      border: "3px solid rgba(255, 255, 255, 0.3)",
+                      borderRadius: "50%",
+                      borderTop: "3px solid #fff",
+                      animation: "spin 1s linear infinite"
+                    }}></div>
+                    <span>Uploading...</span>
+                  </div>
+                ) : 'Upload Leads'}
+              </button>
+            </div>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={handleClose}>
+            <Button variant="secondary" onClick={handleClose} disabled={isUploading}>
               Close
             </Button>
           </Modal.Footer>
         </Modal>
-        
+
+        {/* Add this CSS for the spinner animation */}
+        <style jsx>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
       </Dashboard>
     </div>
   );

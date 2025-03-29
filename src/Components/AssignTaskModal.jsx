@@ -1,29 +1,33 @@
 import axios from 'axios';
 import React, { useState } from 'react';
-import { Modal, Button, Dropdown, DropdownButton, FormControl } from 'react-bootstrap';
+import { Modal, Button, Dropdown, DropdownButton, FormControl, Spinner } from 'react-bootstrap';
 import Swal from 'sweetalert2';
 
 const AssignTaskModal = ({ show, handleClose, employees, selectedData }) => {
 
-  const APi_Url=import.meta.env.VITE_API_URL
+  const APi_Url = import.meta.env.VITE_API_URL;
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [filterText, setFilterText] = useState('');
+  const [loading, setLoading] = useState(false); // Loading state for the button
+
   // Filter employees based on the filter text (name)
   const filteredEmployees = employees.filter(employee =>
     employee.empName.toLowerCase().includes(filterText.toLowerCase())
   );
-  
-  
+
   const handleSelectEmployee = (employee) => {
     setSelectedEmployee(employee); 
   };
 
   // Get the number of tasks selected
   const taskCount = selectedData ? selectedData.length : 0;
+
   const handleAssignLeads = async () => {
     const leadsArray = selectedData.map((item) => item._id);
     const empId = selectedEmployee._id;
   
+    setLoading(true); // Set loading to true when the button is clicked
+
     try {
       // Make an async request to the API to assign leads
       const response = await axios.put(`${APi_Url}/digicoder/crm/api/v1/lead/assign`, {
@@ -40,7 +44,7 @@ const AssignTaskModal = ({ show, handleClose, employees, selectedData }) => {
           confirmButtonText: 'OK'
         }).then(() => {
           handleClose();
-          window.location.reload()
+          window.location.reload();
         });
       } else {
         // Handle unsuccessful response
@@ -60,6 +64,8 @@ const AssignTaskModal = ({ show, handleClose, employees, selectedData }) => {
         text: 'There was an issue assigning the leads. Please try again.',
         confirmButtonText: 'OK'
       });
+    } finally {
+      setLoading(false); // Stop loading after the operation completes
     }
   };
 
@@ -91,7 +97,6 @@ const AssignTaskModal = ({ show, handleClose, employees, selectedData }) => {
                 onClick={() => handleSelectEmployee(employee)}  
               >
                 {employee.empName}
-                {/* {employee._id} */}
               </Dropdown.Item>
             ))
           ) : (
@@ -106,9 +111,19 @@ const AssignTaskModal = ({ show, handleClose, employees, selectedData }) => {
         <Button
           variant="primary"
           onClick={handleAssignLeads}
-          disabled={!selectedEmployee}
+          disabled={!selectedEmployee || loading} // Disable button when loading or no employee selected
         >
-          Assign Leads
+          {loading ? (
+            <Spinner
+              as="span"
+              animation="border"
+              size="sm"
+              role="status"
+              aria-hidden="true"
+              style={{ marginRight: '10px' }}
+            />
+          ) : null}
+          {loading ? 'Assigning...' : 'Assign Leads'}
         </Button>
       </Modal.Footer>
     </Modal>

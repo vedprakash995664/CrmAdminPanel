@@ -20,6 +20,7 @@ import DeletedEmployee from './DeletedEmployee';
 
 function Employee() {
     const APi_Url=import.meta.env.VITE_API_URL
+    const [loading, setLoading] = useState(false); 
     const [globalFilterValue, setGlobalFilterValue] = useState('');
     const [first, setFirst] = useState(0);
     const [rows, setRows] = useState(5);
@@ -46,7 +47,24 @@ function Employee() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const employeeData = useSelector((state) => state.leads.Employee || []).filter((item) => item?.blocked === false);
+    const handleAddWithLoader = async () => {
+        setLoading(true);  // Show the loader
+        try {
+            await handleAddEmployee();  // Your existing handleAddEmployee function
+        } finally {
+            setLoading(false);  // Hide the loader after the operation is complete
+        }
+    };
 
+    // Handle update employee with loader
+    const handleUpdateWithLoader = async () => {
+        setLoading(true);  // Show the loader
+        try {
+            await handleUpdateEmployee();  // Your existing handleUpdateEmployee function
+        } finally {
+            setLoading(false);  // Hide the loader after the operation is complete
+        }
+    };
     useEffect(() => {
         dispatch(fetchEmployee());
     }, [dispatch]);
@@ -119,9 +137,9 @@ function Employee() {
     const actionBodyTemplate = (rowData) => {
         return (
             <div className="flex justify-content-around gap-3">
-                <button onClick={() => handleEdit(rowData)} style={{ borderRadius: "50%", border: "none", height: "40px", width: "40px", backgroundColor: "#EDF1FF", color: "#3454D1" }}>
+                {/* <button onClick={() => handleEdit(rowData)} style={{ borderRadius: "50%", border: "none", height: "40px", width: "40px", backgroundColor: "#EDF1FF", color: "#3454D1" }}>
                     <i className="ri-edit-box-fill"></i>
-                </button>
+                </button> */}
                 <button onClick={() => handleBlock(rowData)} style={{ borderRadius: "50%", border: "none", height: "40px", width: "40px", backgroundColor: "#EDF1FF", color: "red" }}>
                     <i className="ri-lock-line"></i> {/* This could be a lock icon to represent blocking */}
                 </button>
@@ -267,127 +285,147 @@ function Employee() {
             </Dashboard>
 
             {/* Employee Modal */}
-            <Dialog header={isEditing ? "Edit Employee" : "Add New Employee"} visible={showEmployeeModal} onHide={closeEmployeeModal} style={{ width: '50vw' }}>
-                <div className="p-fluid">
-                    <div className="p-field">
-                        <label htmlFor="name">Name</label>
-                        <InputText
-                            id="name"
-                            value={newEmployee.empName}
-                            onChange={(e) => setNewEmployee({ ...newEmployee, empName: e.target.value })}
-                            required
-                        />
-                    </div>
-
-                    <div className="p-field">
-                        <label htmlFor="email">Email</label>
-                        <InputText
-                            id="email"
-                            value={newEmployee.empEmail}
-                            onChange={(e) => setNewEmployee({ ...newEmployee, empEmail: e.target.value })}
-                            required
-                        />
-                    </div>
-                    <div className="p-field">
-                        <label htmlFor="phone">Phone</label>
-                        <InputText
-                            id="phone"
-                            value={newEmployee.empPhoneNumber}
-                            onChange={(e) => setNewEmployee({ ...newEmployee, empPhoneNumber: e.target.value })}
-                            required
-                        />
-                    </div>
-                    <div className="p-field">
-                        <label htmlFor="password">Password</label>
-                        <InputText
-                            id="password"
-                            value={newEmployee.empPassword}
-                            onChange={(e) => setNewEmployee({ ...newEmployee, empPassword: e.target.value })}
-                            required
-                        />
-                    </div>
-                    <div className="p-field">
-                        <label htmlFor="DOB">Date of Birth</label>
-                        <InputText
-                            id="DOB"
-                            type="date"
-                            value={newEmployee.empDOB}
-                            onChange={(e) => setNewEmployee({ ...newEmployee, empDOB: e.target.value })}
-                            required
-                        />
-                    </div>
-                    <div className="p-field">
-                        <label htmlFor="designation">Designation</label>
-                        <InputText
-                            id="designation"
-                            value={newEmployee.empDesignation}
-                            onChange={(e) => setNewEmployee({ ...newEmployee, empDesignation: e.target.value })}
-                            required
-                        />
-                    </div>
-
-                    <div className="p-field">
-                        <label htmlFor="gender">Gender</label>
-                        <Dropdown
-                            id="gender"
-                            value={newEmployee.empGender}
-                            options={[
-                                { label: 'Select', value: '' },
-                                { label: 'Male', value: 'Male' },
-                                { label: 'Female', value: 'Female' }
-                            ]}
-                            onChange={(e) => setNewEmployee({ ...newEmployee, empGender: e.value })}
-                            placeholder="Select Gender"
-                            style={{ width: '100%' }}
-                        />
-                    </div>
-                    <div className="p-field">
-                        <label htmlFor="State">State</label>
-                        <InputText
-                            id="State"
-                            value={newEmployee.empState}
-                            onChange={(e) => setNewEmployee({ ...newEmployee, empState: e.target.value })}
-                            required
-                        />
-                    </div>
-                    <div className="p-field">
-                        <label htmlFor="City">City</label>
-                        <InputText
-                            id="City"
-                            value={newEmployee.empCity}
-                            onChange={(e) => setNewEmployee({ ...newEmployee, empCity: e.target.value })}
-                            required
-                        />
-                    </div>
-                    <div className="p-field">
-                        <label htmlFor="Country">Country</label>
-                        <InputText
-                            id="Country"
-                            value={newEmployee.empCountry}
-                            onChange={(e) => setNewEmployee({ ...newEmployee, empCountry: e.target.value })}
-                            required
-                        />
-                    </div>
-                    <div className="p-field">
-                        <label htmlFor="ZipCode">ZipCode</label>
-                        <InputText
-                            id="ZipCode"
-                            value={newEmployee.empZipCode}
-                            onChange={(e) => setNewEmployee({ ...newEmployee, empZipCode: e.target.value })}
-                            required
-                        />
-                    </div>
-                </div>
-                <div className="p-d-flex p-jc-end mt-5">
-                    <Button label="Cancel" icon="pi pi-times" onClick={closeEmployeeModal} className="p-button-text mr-4" />
-                    <Button
-                        label={isEditing ? "Update" : "Add"}
-                        icon={isEditing ? "pi pi-check" : "pi pi-plus"}
-                        onClick={isEditing ? handleUpdateEmployee : handleAddEmployee}
-                        className="p-button-primary"
+            <Dialog 
+            header={isEditing ? "Edit Employee" : "Add New Employee"} 
+            visible={showEmployeeModal} 
+            onHide={closeEmployeeModal} 
+            style={{ width: '50vw' }}
+        >
+            <div className="p-fluid">
+                <div className="p-field">
+                    <label htmlFor="name">Name</label>
+                    <InputText
+                        id="name"
+                        value={newEmployee.empName}
+                        onChange={(e) => setNewEmployee({ ...newEmployee, empName: e.target.value })}
+                        required
                     />
                 </div>
-            </Dialog>
+
+                <div className="p-field">
+                    <label htmlFor="email">Email</label>
+                    <InputText
+                        id="email"
+                        value={newEmployee.empEmail}
+                        onChange={(e) => setNewEmployee({ ...newEmployee, empEmail: e.target.value })}
+                        required
+                    />
+                </div>
+
+                <div className="p-field">
+                    <label htmlFor="phone">Phone</label>
+                    <InputText
+                        id="phone"
+                        value={newEmployee.empPhoneNumber}
+                        onChange={(e) => setNewEmployee({ ...newEmployee, empPhoneNumber: e.target.value })}
+                        required
+                    />
+                </div>
+
+                <div className="p-field">
+                    <label htmlFor="password">Password</label>
+                    <InputText
+                        id="password"
+                        value={newEmployee.empPassword}
+                        onChange={(e) => setNewEmployee({ ...newEmployee, empPassword: e.target.value })}
+                        required
+                    />
+                </div>
+
+                <div className="p-field">
+                    <label htmlFor="DOB">Date of Birth</label>
+                    <InputText
+                        id="DOB"
+                        type="date"
+                        value={newEmployee.empDOB}
+                        onChange={(e) => setNewEmployee({ ...newEmployee, empDOB: e.target.value })}
+                        required
+                    />
+                </div>
+
+                <div className="p-field">
+                    <label htmlFor="designation">Designation</label>
+                    <InputText
+                        id="designation"
+                        value={newEmployee.empDesignation}
+                        onChange={(e) => setNewEmployee({ ...newEmployee, empDesignation: e.target.value })}
+                        required
+                    />
+                </div>
+
+                <div className="p-field">
+                    <label htmlFor="gender">Gender</label>
+                    <Dropdown
+                        id="gender"
+                        value={newEmployee.empGender}
+                        options={[
+                            { label: 'Select', value: '' },
+                            { label: 'Male', value: 'Male' },
+                            { label: 'Female', value: 'Female' }
+                        ]}
+                        onChange={(e) => setNewEmployee({ ...newEmployee, empGender: e.value })}
+                        placeholder="Select Gender"
+                        style={{ width: '100%' }}
+                    />
+                </div>
+
+                <div className="p-field">
+                    <label htmlFor="State">State</label>
+                    <InputText
+                        id="State"
+                        value={newEmployee.empState}
+                        onChange={(e) => setNewEmployee({ ...newEmployee, empState: e.target.value })}
+                        required
+                    />
+                </div>
+
+                <div className="p-field">
+                    <label htmlFor="City">City</label>
+                    <InputText
+                        id="City"
+                        value={newEmployee.empCity}
+                        onChange={(e) => setNewEmployee({ ...newEmployee, empCity: e.target.value })}
+                        required
+                    />
+                </div>
+
+                <div className="p-field">
+                    <label htmlFor="Country">Country</label>
+                    <InputText
+                        id="Country"
+                        value={newEmployee.empCountry}
+                        onChange={(e) => setNewEmployee({ ...newEmployee, empCountry: e.target.value })}
+                        required
+                    />
+                </div>
+
+                <div className="p-field">
+                    <label htmlFor="ZipCode">ZipCode</label>
+                    <InputText
+                        id="ZipCode"
+                        value={newEmployee.empZipCode}
+                        onChange={(e) => setNewEmployee({ ...newEmployee, empZipCode: e.target.value })}
+                        required
+                    />
+                </div>
+            </div>
+
+            <div className="p-d-flex p-jc-end mt-5">
+                <Button
+                    label="Cancel"
+                    icon="pi pi-times"
+                    onClick={closeEmployeeModal}
+                    className="p-button-text mr-4"
+                />
+                <Button
+                    label={isEditing ? "Update" : "Add"}
+                    icon={isEditing ? "pi pi-check" : "pi pi-plus"}
+                    onClick={isEditing ? handleUpdateWithLoader : handleAddWithLoader}
+                    className="p-button-primary"
+                    loading={loading}  // Show the loader when `loading` state is true
+                />
+            </div>
+        </Dialog>
 
             {/* PrimeReact Toast Component */}
             <Toast ref={toast} position="top-right" />
