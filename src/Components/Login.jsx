@@ -34,8 +34,8 @@ const Login = () => {
           toast.success("Logged in successfully!");
           const token = 'dvhdscvydsyjucbvdsjbvju';;
           const adminId = response.data.existUser._id;
-          const name=response.data.existUser.name
-          sessionStorage.setItem("Name",name)
+          const name=response.data.existUser
+          sessionStorage.setItem("Name",JSON.stringify(name))
           sessionStorage.setItem("Token", token);
           sessionStorage.setItem("AdminId", adminId);
           setTimeout(() => {

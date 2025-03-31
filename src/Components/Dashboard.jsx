@@ -7,7 +7,10 @@ import Swal from 'sweetalert2';
 const Dashboard = ({ children, active }) => {
   const [sidebarActive, setSidebarActive] = useState(false);
   const [isShow, setIsShow] = useState(false);  
-  const user = sessionStorage.getItem("Name"); 
+  const userString = sessionStorage.getItem('Name');
+  const name = userString ? JSON.parse(userString) : null;
+
+  
   
   const navigate = useNavigate();
   
@@ -37,6 +40,7 @@ const Dashboard = ({ children, active }) => {
         }).then(() => {
           sessionStorage.removeItem("Token");
           sessionStorage.removeItem("AdminId");
+          sessionStorage.removeItem("Name");
           navigate('/');
         });
       } else {
@@ -141,7 +145,7 @@ const Dashboard = ({ children, active }) => {
 
       <div className="main-content">
         <header className="header">
-          <h1 className="header-title">Welcome Back, {user}</h1>
+          <h1 className="header-title">Welcome Back, {name.name}</h1>
           <button className="hamburger" onClick={toggleSidebar}>
             {sidebarActive ? "×" : "☰"}
           </button>

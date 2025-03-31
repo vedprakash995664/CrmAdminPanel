@@ -299,6 +299,12 @@ body {
   }
 }
 
+@media(max-width:768px){
+  .sidebar-close-btn {
+    display: block;
+    right: 20px;
+  }
+}
 /* Mobile devices */
 @media (max-width: 600px) {
   .sidebar {
@@ -348,10 +354,7 @@ body {
     overflow-y: auto;
   }
 
-  .sidebar-close-btn {
-    display: block;
-    right: 20px;
-  }
+  
 }
 
 @media(max-width:780px){

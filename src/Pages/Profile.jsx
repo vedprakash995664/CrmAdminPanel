@@ -7,11 +7,12 @@ function Profile() {
   const [isEditing, setIsEditing] = useState(false); // Toggle for editing mode
   const navigate=useNavigate()
 
-  
+  const userString = sessionStorage.getItem('Name');
+  const name = userString ? JSON.parse(userString) : null;
   const [user, setUser] = useState({
-    name: "John Doe",
-    email: "johndoe@example.com",
-    phone: "123-456-7890",
+    name: name.name || "",
+    email: name.email || "",
+    phone: name.mobile || "",
     image: "/Images/ved.jpg",
   });
 
@@ -88,9 +89,9 @@ function Profile() {
             </div>
           </div>
           <div className="button-container">
-            <button onClick={handleEditSaveToggle}>
+            {/* <button onClick={handleEditSaveToggle}>
               {isEditing ? "Save" : "Update"}
-            </button>
+            </button> */}
           </div>
         </div>
         <br />
