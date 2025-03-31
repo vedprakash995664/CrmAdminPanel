@@ -249,13 +249,13 @@ export default function DynamicTable({ lead, tableTitle }) {
                 <Column field="priority" header="PRIORITY" sortable style={{ width: '10%', textAlign: "center" }} />
                 <Column field="sources" header="Sources" sortable style={{ width: '15%' }} />
                 <Column header="Assigned TO" body={(rowData) => rowData.leadAssignedTo?.empName || "NA"} style={{ width: '20%' }} />
-                <Column 
+                {/* <Column 
                     field="tags" 
                     header="Tags" 
                     body={(rowData) => rowData.tags ? rowData.tags.join(", ") : "No Tags"} 
                     sortable 
                     style={{ width: '15%' }} 
-                />
+                /> */}
                 <Column header="ACTION" body={actionBodyTemplate} style={{ width: '15%' }} />
             </DataTable>
 
