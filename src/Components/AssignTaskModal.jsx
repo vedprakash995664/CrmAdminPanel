@@ -2,7 +2,7 @@ import axios from 'axios';
 import React, { useState } from 'react';
 import { Modal, Button, Dropdown, DropdownButton, FormControl, Spinner } from 'react-bootstrap';
 import Swal from 'sweetalert2';
-
+import { fetchLeads } from '../Features/LeadSlice';
 const AssignTaskModal = ({ show, handleClose, employees, selectedData }) => {
 
   const APi_Url = import.meta.env.VITE_API_URL;
@@ -21,12 +21,11 @@ const AssignTaskModal = ({ show, handleClose, employees, selectedData }) => {
 
   // Get the number of tasks selected
   const taskCount = selectedData ? selectedData.length : 0;
-
   const handleAssignLeads = async () => {
     const leadsArray = selectedData.map((item) => item._id);
     const empId = selectedEmployee._id;
   
-    setLoading(true); // Set loading to true when the button is clicked
+    setLoading(true); // Set loading to true when the button is clicked  
 
     try {
       // Make an async request to the API to assign leads
@@ -34,9 +33,7 @@ const AssignTaskModal = ({ show, handleClose, employees, selectedData }) => {
         leadsArray,
         empId
       });
-      
       if (response.status === 200) {
-        // Show SweetAlert on successful lead assignment
         Swal.fire({
           icon: 'success',
           title: 'Leads Assigned',
@@ -45,6 +42,7 @@ const AssignTaskModal = ({ show, handleClose, employees, selectedData }) => {
         }).then(() => {
           handleClose();
           window.location.reload();
+          
         });
       } else {
         // Handle unsuccessful response

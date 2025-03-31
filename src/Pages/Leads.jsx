@@ -103,7 +103,7 @@ function Leads() {
 
   // Fetch lead data on component mount
   useEffect(() => {
-    dispatch(fetchLeads());
+    dispatch(fetchLeads());  
   }, [dispatch]);
 
   // Handle Excel file upload
@@ -208,7 +208,7 @@ function Leads() {
     link.click();
   };
 
-  // Handle dropdown change for priority
+  // Handle dropdown change for priority   
   const handlePriorityChange = (e) => {
     setSelectedPriority(e.value);
   };
