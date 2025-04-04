@@ -16,6 +16,7 @@ function Tag() {
   const APi_Url = import.meta.env.VITE_API_URL;
   const [newTag, setNewTag] = useState('');
   const [show, setShow] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(''); // Added search state
   const dispatch = useDispatch();
   const tagData = useSelector((state) => state.leads.tag);
   const navigate = useNavigate();
@@ -110,6 +111,11 @@ function Tag() {
     });
   };
 
+  // Filter the tags based on the search query
+  const filteredTags = tagData.filter(tag => 
+    tag.tagName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div>
       <Dashboard active={'tag'}>
@@ -134,8 +140,25 @@ function Tag() {
                 </button>
               </div>
               
+              {/* Search input field */}
+              <div className="flex justify-content-between p-4">
+                <input 
+                  type="text" 
+                  placeholder="Search tags..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{
+                    outline:"none", 
+                    padding:"8px", 
+                    width:"50%", 
+                    border:"1px solid #ccc",
+                    borderRadius:"4px"
+                  }}
+                />
+              </div>
+
               <DataTable 
-                value={tagData || []} 
+                value={filteredTags} // Use filtered tags
                 stripedRows 
                 bordered
                 emptyMessage="No tags found"
