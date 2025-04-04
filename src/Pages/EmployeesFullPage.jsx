@@ -9,6 +9,8 @@ import UnpublishedIcon from '@mui/icons-material/Unpublished';
 import Dashboard from '../Components/Dashboard';
 import axios from "axios";
 import Swal from 'sweetalert2'; // Import SweetAlert2
+import { fetchLeads } from "../Features/LeadSlice";
+import { useDispatch, useSelector } from "react-redux";
 
 function EmployeesFullPage() {
   const APi_Url=import.meta.env.VITE_API_URL
@@ -16,14 +18,18 @@ function EmployeesFullPage() {
   const [isWeekdata, setisWeekdata] = useState(true);
   const [isMonthdata, setisMonthdata] = useState(false);
   const [isYeardata, setisYeardata] = useState(false);
+  const dispatch = useDispatch();
   const [reportTitle, setReportTitle] = useState('Weekly Report');
   const EmployeeData = JSON.parse(localStorage.getItem("Employee"));
-  console.log("data from here", EmployeeData);
+  const leads = useSelector((state) => state.leads.leads);
+  const filteredLead = leads.filter((lead) => lead.deleted === false);
+  console.log("data from here", EmployeeData);   
   let EmpStatus = "Active";
   if (EmployeeData.blocked === true) {
     EmpStatus = "Blocked";
   }
   const currentEmployeeId = EmployeeData._id;
+  const TotalAssignedLeads = filteredLead.filter((item) => item.leadAssignedTo._id === currentEmployeeId);
   const [formData, setFormData] = useState({
     Name: EmployeeData?.empName || "",
     Email: EmployeeData?.empEmail || "",
@@ -53,7 +59,9 @@ function EmployeesFullPage() {
     empZipCode: formData.ZipCode || "",
     empCountry: formData.Country || "",
   });
-
+  useEffect(() => {
+    dispatch(fetchLeads());  
+  }, [dispatch]);
   useEffect(() => {
     const tokenId = sessionStorage.getItem('Token');
     if (!tokenId) {
@@ -360,7 +368,7 @@ function EmployeesFullPage() {
                   </div>
                   <div className="report-card12">
                     <span>Assigned Leads</span>
-                    <p>100+</p>
+                    <p>{TotalAssignedLeads.length}</p>
                   </div>
                 </div>
                 <div className="report-card1" style={{ backgroundColor: "#3454D1", color: "white" }}>

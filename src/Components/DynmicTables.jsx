@@ -50,6 +50,10 @@ export default function DynamicTable({ lead, tableTitle }) {
     const [buttonTitle, setButtonTitle] = useState('');
     const [leadData, setLeadData] = useState([]);
     const [selectedTagValues, setSelectedTagValues] = useState([]);
+    const [selectAll, setSelectAll] = useState(false);
+    const [rangeModalOpen, setRangeModalOpen] = useState(false);
+    const [rangeStart, setRangeStart] = useState();
+    const [rangeEnd, setRangeEnd] = useState();
     const navigate = useNavigate();
 
     // Tags options with tag name
@@ -61,6 +65,8 @@ export default function DynamicTable({ lead, tableTitle }) {
         _filters['global'].value = value;
         setFilters(_filters);
         setGlobalFilterValue(value);
+        // Reset selectAll when filter changes
+        setSelectAll(false);
     };
 
     const onPageChange = (event) => {
@@ -90,8 +96,9 @@ export default function DynamicTable({ lead, tableTitle }) {
         if (selectedTagValues.length > 0) {
             return filteredByGlobal.filter(item => {
                 if (!item.tags || !Array.isArray(item.tags)) return false;
-                return selectedTagValues.some(selectedTag => 
-                    item.tags.some(tag => tag === selectedTag)
+                // Check if every selected tag is present in the item's tags
+                return selectedTagValues.every(selectedTag =>
+                    item.tags.includes(selectedTag)
                 );
             });
         }
@@ -99,26 +106,119 @@ export default function DynamicTable({ lead, tableTitle }) {
         return filteredByGlobal;
     };
 
+    // Get filtered data
+    const filteredLeads = getFilteredLeads();
+
+    // Update selected rows when select all changes or filtered leads change
+    useEffect(() => {
+        if (selectAll) {
+            setSelectedRows([...filteredLeads]);
+        } else {
+            // If user unchecks "select all", clear all selections
+            setSelectedRows([]);
+        }
+    }, [selectAll, filters.global.value, selectedTagValues]);
+
+    // Handle the "Select All" checkbox change
+    const handleSelectAllChange = (e) => {
+        const checked = e.target.checked;
+        setSelectAll(checked);
+    };
+
+    // Open range selection modal
+    const openRangeModal = () => {
+        setRangeModalOpen(true);
+    };
+
+    // Close range selection modal
+    const closeRangeModal = () => {
+        setRangeModalOpen(false);
+    };
+
+    // Handle range selection
+    const handleRangeSelection = () => {
+        if (rangeStart < 1 || rangeEnd > filteredLeads.length || rangeStart > rangeEnd) {
+            toast.current.show({ 
+                severity: 'warn', 
+                summary: 'Invalid Range', 
+                detail: `Please enter a valid range between 1 and ${filteredLeads.length}`, 
+                life: 3000 
+            });
+            return;
+        }
+
+        // Clear previous selections
+        setSelectedRows([]);
+        setSelectAll(false);
+
+        // Select leads in the specified range (note: array is 0-indexed but user input is 1-indexed)
+        const newSelectedRows = [];
+        for (let i = rangeStart - 1; i < rangeEnd && i < filteredLeads.length; i++) {
+            newSelectedRows.push(filteredLeads[i]);
+        }
+        
+        setSelectedRows(newSelectedRows);
+        closeRangeModal();
+        
+        toast.current.show({ 
+            severity: 'success', 
+            summary: 'Range Selected', 
+            detail: `Selected ${newSelectedRows.length} leads from range ${rangeStart} to ${rangeEnd}`, 
+            life: 3000 
+        });
+    };
+
     const renderHeader = () => {
         return (
             <div className="flex justify-content-between gap-3 align-items-center p-2">
-                <h5>{tableTitle}</h5>
+                <div className="flex align-items-center">
+                    <h5>{tableTitle}</h5>
+                    <div style={{ marginLeft: '15px' }}>
+                        <input
+                            type="checkbox"
+                            checked={selectAll}
+                            onChange={handleSelectAllChange}
+                            id="selectAllCheckbox"
+                        />
+                        <label htmlFor="selectAllCheckbox" style={{ marginLeft: '5px' }}>Select All</label>
+                       
+                        <button 
+                            onClick={openRangeModal} 
+                            style={{ 
+                                marginLeft: '15px', 
+                                backgroundColor: '#EDF1FF', 
+                                color: '#3454D1', 
+                                border: 'none', 
+                                borderRadius: '4px', 
+                                padding: '4px 8px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Select Range
+                        </button>
+                    </div>
+                </div>
                 <div>
-                    <InputText 
-                        value={globalFilterValue} 
-                        onChange={onGlobalFilterChange} 
-                        placeholder="Keyword Search" 
-                        style={{ width: "100%", maxWidth: "200px", marginRight: "10px" }} 
+                    <InputText
+                        value={globalFilterValue}
+                        onChange={onGlobalFilterChange}
+                        placeholder="Keyword Search"
+                        style={{ width: "100%", maxWidth: "200px", marginRight: "10px" }}
                     />
                     <MultiSelect
                         value={selectedTagValues}
                         options={tagsOptions.map(tag => tag.value)} // Just use the values
-                        onChange={(e) => setSelectedTagValues(e.value)}
+                        onChange={(e) => {
+                            setSelectedTagValues(e.value);
+                            setSelectAll(false); // Reset selectAll when tag filter changes
+                        }}
                         filter
                         placeholder="Filter by Tags"
                         style={{ width: "100%", maxWidth: "150px", marginRight: "10px" }}
                     />
-                    <button onClick={handleShow} className='assignLeadBtn'>Assign Leads</button>
+                    <button onClick={handleShow} className='assignLeadBtn'>
+                        Assign Leads {selectedRows.length > 0 ? `(${selectedRows.length})` : ''}
+                    </button>
                 </div>
             </div>
         );
@@ -202,14 +302,20 @@ export default function DynamicTable({ lead, tableTitle }) {
     const handleCheckboxChange = (e, rowData) => {
         const checked = e.target.checked;
         if (checked) {
-            setSelectedRows([...selectedRows, rowData]);
+            // Add the row to selected rows if not already there
+            if (!selectedRows.some(row => row._id === rowData._id)) {
+                setSelectedRows([...selectedRows, rowData]);
+            }
         } else {
-            setSelectedRows(selectedRows.filter(item => item !== rowData));
+            // Remove the row from selected rows
+            setSelectedRows(selectedRows.filter(row => row._id !== rowData._id));
+            // Uncheck select all if it was checked
+            if (selectAll) {
+                setSelectAll(false);
+            }
         }
     };
 
-    // Get filtered data
-    const filteredLeads = getFilteredLeads();
     const header = renderHeader();
 
     return (
@@ -229,6 +335,13 @@ export default function DynamicTable({ lead, tableTitle }) {
                 paginatorTemplate=" PrevPageLink PageLinks NextPageLink "
                 removableSort
                 style={{ borderRadius: "10px" }}
+                footer={
+                    <div className="p-2">
+                        <div className="selection-summary">
+                            <strong>Selected: </strong>{selectedRows.length} of {filteredLeads.length} leads
+                        </div>
+                    </div>
+                }
             >
                 <Column
                     header="SR No"
@@ -236,7 +349,7 @@ export default function DynamicTable({ lead, tableTitle }) {
                         <div className="flex align-items-center gap-3">
                             <input
                                 type="checkbox"
-                                checked={selectedRows.includes(rowData)}
+                                checked={selectedRows.some(row => row._id === rowData._id)}
                                 onChange={(e) => handleCheckboxChange(e, rowData)}
                             />
                             {rowIndex + 1}
@@ -249,15 +362,97 @@ export default function DynamicTable({ lead, tableTitle }) {
                 <Column field="priority" header="PRIORITY" sortable style={{ width: '10%', textAlign: "center" }} />
                 <Column field="sources" header="Sources" sortable style={{ width: '15%' }} />
                 <Column header="Assigned TO" body={(rowData) => rowData.leadAssignedTo?.empName || "NA"} style={{ width: '20%' }} />
-                {/* <Column 
-                    field="tags" 
-                    header="Tags" 
-                    body={(rowData) => rowData.tags ? rowData.tags.join(", ") : "No Tags"} 
-                    sortable 
-                    style={{ width: '15%' }} 
-                /> */}
                 <Column header="ACTION" body={actionBodyTemplate} style={{ width: '15%' }} />
             </DataTable>
+
+            {/* Range Selection Modal */}
+            {rangeModalOpen && (
+                <div className="range-selection-modal" style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 1000
+                }}>
+                    <div style={{
+                        backgroundColor: 'white',
+                        padding: '20px',
+                        borderRadius: '8px',
+                        width: '400px',
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
+                    }}>
+                        <h3>Select Leads by Range</h3>
+                        <p>Total available leads: {filteredLeads.length}</p>
+                        
+                        <div style={{ marginBottom: '15px' }}>
+                            <label style={{ display: 'block', marginBottom: '5px' }}>Start (From):</label>
+                            <input 
+                                type="number" 
+                                value={rangeStart} 
+                                onChange={(e) => setRangeStart(parseInt(e.target.value) || 1)}
+                                min="1" 
+                                max={filteredLeads.length} 
+                                style={{
+                                    width: '100%',
+                                    padding: '8px',
+                                    border: '1px solid #ddd',
+                                    borderRadius: '4px'
+                                }}
+                            />
+                        </div>
+                        
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '5px' }}>End (To):</label>
+                            <input 
+                                type="number" 
+                                value={rangeEnd} 
+                                onChange={(e) => setRangeEnd(parseInt(e.target.value) || rangeStart)}
+                                min={rangeStart} 
+                                max={filteredLeads.length} 
+                                style={{
+                                    width: '100%',
+                                    padding: '8px',
+                                    border: '1px solid #ddd',
+                                    borderRadius: '4px'
+                                }}
+                            />
+                        </div>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                            <button 
+                                onClick={closeRangeModal}
+                                style={{
+                                    padding: '8px 16px',
+                                    border: '1px solid #ddd',
+                                    borderRadius: '4px',
+                                    backgroundColor: '#f5f5f5',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={handleRangeSelection}
+                                style={{
+                                    padding: '8px 16px',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    backgroundColor: '#3454D1',
+                                    color: 'white',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Select
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <Modal isOpen={isModalOpen} onClose={closeModal} title={title} buttonTitle={buttonTitle} leadData={leadData} />
             <AssignTaskModal show={showModal} handleClose={handleClose} employees={employeeData} selectedData={selectedRows} />
