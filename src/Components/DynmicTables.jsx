@@ -21,6 +21,7 @@ export default function DynamicTable({ lead, tableTitle }) {
     const dispatch = useDispatch();
     const tagData = useSelector((state) => state.leads.tag);
     const employeeData = useSelector((state) => state.leads.Employee || []).filter((item) => item?.blocked === false);
+    const [loading, setLoading] = useState(true); // Add loading state
 
     useEffect(() => {
         dispatch(fetchTags());
@@ -29,6 +30,17 @@ export default function DynamicTable({ lead, tableTitle }) {
     useEffect(() => {
         dispatch(fetchEmployee());
     }, [dispatch]);
+
+    // Add effect to handle loading state based on leads data
+    useEffect(() => {
+        if (lead) {
+            // Set a small delay to show the loader (optional)
+            const timer = setTimeout(() => {
+                setLoading(false);
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [lead]);
 
     const toast = useRef(null);
 
@@ -318,52 +330,83 @@ export default function DynamicTable({ lead, tableTitle }) {
 
     const header = renderHeader();
 
+    // Loading spinner component
+    const Loader = () => (
+        <div className="loader-container" style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '300px',
+            width: '100%'
+        }}>
+            <div className="spinner" style={{
+                border: '4px solid rgba(0, 0, 0, 0.1)',
+                borderRadius: '50%',
+                borderTop: '4px solid #3454D1',
+                width: '50px',
+                height: '50px',
+                animation: 'spin 1s linear infinite'
+            }}></div>
+            <style>{`
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `}</style>
+        </div>
+    );
+
     return (
         <div className="card">
             <Toast ref={toast} />
-            <DataTable
-                value={filteredLeads}
-                rows={rows}
-                first={first}
-                paginator
-                dataKey="_id"
-                filters={filters}
-                filterDisplay="menu"
-                header={header}
-                emptyMessage="No leads found."
-                onPage={onPageChange}
-                paginatorTemplate=" PrevPageLink PageLinks NextPageLink "
-                removableSort
-                style={{ borderRadius: "10px" }}
-                footer={
-                    <div className="p-2">
-                        <div className="selection-summary">
-                            <strong>Selected: </strong>{selectedRows.length} of {filteredLeads.length} leads
+            
+            {loading ? (
+                <Loader />
+            ) : (
+                <DataTable
+                    value={filteredLeads}
+                    rows={rows}
+                    first={first}
+                    paginator
+                    dataKey="_id"
+                    filters={filters}
+                    filterDisplay="menu"
+                    header={header}
+                    emptyMessage="No leads found."
+                    onPage={onPageChange}
+                    paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
+                    removableSort
+                    style={{ borderRadius: "10px" }}
+                    footer={
+                        <div className="p-2">
+                            <div className="selection-summary">
+                                <strong>Selected: </strong>{selectedRows.length} of {filteredLeads.length} leads
+                            </div>
                         </div>
-                    </div>
-                }
-            >
-                <Column
-                    header="SR No"
-                    body={(rowData, { rowIndex }) => (
-                        <div className="flex align-items-center gap-3">
-                            <input
-                                type="checkbox"
-                                checked={selectedRows.some(row => row._id === rowData._id)}
-                                onChange={(e) => handleCheckboxChange(e, rowData)}
-                            />
-                            {rowIndex + 1}
-                        </div>
-                    )}
-                    style={{ width: '10%' }}
-                />
-                <Column field="name" header="NAME" sortable style={{ width: '15%' }} />
-                <Column field="phone" header="PHONE" sortable style={{ width: '15%' }} />
-                <Column field="priority" header="PRIORITY" sortable style={{ width: '10%', textAlign: "center" }} />
-                <Column field="sources" header="Sources" sortable style={{ width: '15%' }} />
-                <Column header="Assigned TO" body={(rowData) => rowData.leadAssignedTo?.empName || "NA"} style={{ width: '20%' }} />
-                <Column header="ACTION" body={actionBodyTemplate} style={{ width: '15%' }} />
-            </DataTable>
+                    }
+                >
+                    <Column
+                        header="SR No"
+                        body={(rowData, { rowIndex }) => (
+                            <div className="flex align-items-center gap-3">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedRows.some(row => row._id === rowData._id)}
+                                    onChange={(e) => handleCheckboxChange(e, rowData)}
+                                />
+                                {rowIndex + 1}
+                            </div>
+                        )}
+                        style={{ width: '10%' }}
+                    />
+                    <Column field="name" header="NAME" sortable style={{ width: '15%' }} />
+                    <Column field="phone" header="PHONE" sortable style={{ width: '15%' }} />
+                    <Column field="priority" header="PRIORITY" sortable style={{ width: '10%', textAlign: "center" }} />
+                    <Column field="sources" header="Sources" sortable style={{ width: '15%' }} />
+                    <Column header="Assigned TO" body={(rowData) => rowData.leadAssignedTo?.empName || "NA"} style={{ width: '20%' }} />
+                    <Column header="ACTION" body={actionBodyTemplate} style={{ width: '15%' }} />
+                </DataTable>
+            )}
 
             {/* Range Selection Modal */}
             {rangeModalOpen && (
