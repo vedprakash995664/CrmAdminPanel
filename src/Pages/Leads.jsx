@@ -14,7 +14,6 @@ import axios from 'axios';
 import DeletedDynamicTable from '../Components/DeletedDynamicTable';
 import DeletedDynamicCard from '../Components/DeletedDynamicCard';
 import { Toast } from 'primereact/toast';
-import { toast } from 'react-toastify';
 
 function Leads() {
   const [leadData, setLeadData] = useState([]);
@@ -73,7 +72,7 @@ function Leads() {
         }))
       );
     }
-  }, [employeeData]);
+  }, []);
 
   useEffect(() => {
     if (priorityData && Array.isArray(priorityData)) {
@@ -412,7 +411,7 @@ function Leads() {
                 optionLabel="label"
                 placeholder="Select Employee"
                 className="p-dropdown p-component"
-                style={{ width: "50%" }}
+                style={{ width: "50%", }}
               />
               
               {/* Custom MultiSelect implementation with fixed height */}
@@ -436,7 +435,7 @@ function Leads() {
                     alignItems: 'center',
                     cursor: 'pointer',
                     backgroundColor: 'white',
-                    height: '38px',  // Fixed height
+                    height: '50px',  // Fixed height
                     overflow: 'hidden'
                   }}
                 >

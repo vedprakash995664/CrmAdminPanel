@@ -7,11 +7,16 @@ import { Dialog } from 'primereact/dialog';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
+import { MultiSelect } from 'primereact/multiselect';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchPriority, fetchSources } from '../Features/LeadSlice';
 
 const LeadForm = ({ isOpen, onClose, title, buttonTitle, leadData }) => {
   const APi_Url = import.meta.env.VITE_API_URL;
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [selectedTagValues, setSelectedTagValues] = useState([]);
+  const [selectAll, setSelectAll] = useState(false);
+  const tagData = useSelector((state) => state.leads.tag);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -20,12 +25,13 @@ const LeadForm = ({ isOpen, onClose, title, buttonTitle, leadData }) => {
   });
 
   const dispatch = useDispatch();
-  const priorityData = useSelector((state) => state.leads.Priority); 
+  const priorityData = useSelector((state) => state.leads.Priority);
   const sourcesData = useSelector((state) => state.leads.leadSources);
 
   const [priorityOptions, setPriorityOptions] = useState([]);
   const [sourcesOptions, setSourcesOptions] = useState([]);
-  const [loading, setLoading] = useState(false); // Add loading state
+  const [tagsOptions, setTagsOptions] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     dispatch(fetchPriority());
@@ -54,6 +60,17 @@ const LeadForm = ({ isOpen, onClose, title, buttonTitle, leadData }) => {
     }
   }, [sourcesData]);
 
+  useEffect(() => {
+    if (tagData && Array.isArray(tagData)) {
+      setTagsOptions(
+        tagData.map((tag) => ({
+          label: tag.tagText || tag.tagName,
+          value: tag.tagName || tag.tagText
+        }))
+      );
+    }
+  }, [tagData]);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prevState => ({
@@ -71,11 +88,17 @@ const LeadForm = ({ isOpen, onClose, title, buttonTitle, leadData }) => {
       return;
     }
 
-    setLoading(true); // Start loader
+    setLoading(true);
 
     try {
       const AdminId = sessionStorage.getItem("AdminId");
-      const response = await axios.post(`${APi_Url}/digicoder/crm/api/v1/lead/add/${AdminId}`, formData, {
+      // Include selected tags in form data
+      const dataToSubmit = {
+        ...formData,
+        tags: selectedTagValues
+      };
+      
+      const response = await axios.post(`${APi_Url}/digicoder/crm/api/v1/lead/add/${AdminId}`, dataToSubmit, {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -92,30 +115,30 @@ const LeadForm = ({ isOpen, onClose, title, buttonTitle, leadData }) => {
       console.error('Error adding lead:', error);
       toast.error('Failed to add lead');
     } finally {
-      setLoading(false); // Stop loader
+      setLoading(false);
     }
   };
 
   return (
-    <Dialog 
+    <Dialog
       header={title}
       visible={isOpen}
       onHide={onClose}
       className='leadFormOuter'
       footer={
         <footer>
-          <Button 
-            label="Close" 
-            icon="pi pi-times" 
-            onClick={onClose} 
-            className="p-button-text p-button-rounded" 
+          <Button
+            label="Close"
+            icon="pi pi-times"
+            onClick={onClose}
+            className="p-button-text p-button-rounded"
           />
-          <Button 
-            label={buttonTitle} 
-            icon="pi pi-check" 
-            onClick={handleSubmit} 
-            className={`p-button-rounded p-button-success ${loading ? 'p-button-loading' : ''}`} 
-            loading={loading} // Loading prop for loader
+          <Button
+            label={buttonTitle}
+            icon="pi pi-check"
+            onClick={handleSubmit}
+            className={`p-button-rounded p-button-success ${loading ? 'p-button-loading' : ''}`}
+            loading={loading}
           />
         </footer>
       }
@@ -169,9 +192,28 @@ const LeadForm = ({ isOpen, onClose, title, buttonTitle, leadData }) => {
               value={formData.sources}
               options={sourcesOptions}
               onChange={handleInputChange}
-              optionLabel="value"
+              optionLabel="label" 
+              optionValue="value" 
               placeholder="Select source"
               className="p-dropdown p-component"
+            />
+          </div>
+          
+          <div className="p-field p-col-12 p-md-6">
+            <label htmlFor="tags">Tags:</label>
+            <MultiSelect
+              id="tags"
+              value={selectedTagValues}
+              options={tagsOptions}
+              onChange={(e) => {
+                setSelectedTagValues(e.value);
+                setSelectAll(false);
+              }}
+              optionLabel="label"
+              optionValue="value"
+              filter
+              placeholder="Filter by Tags"
+              className="p-multiselect p-component"
             />
           </div>
         </div>
