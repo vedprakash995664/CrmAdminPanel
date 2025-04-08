@@ -12,7 +12,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchEmployee, fetchLeads, fetchPriority, fetchSources } from '../Features/LeadSlice';
 import axios from 'axios';
 import DeletedDynamicTable from '../Components/DeletedDynamicTable';
-import { MultiSelect } from 'primereact/multiselect';
 import DeletedDynamicCard from '../Components/DeletedDynamicCard';
 import { Toast } from 'primereact/toast';
 import { toast } from 'react-toastify';
@@ -30,8 +29,15 @@ function Leads() {
   const [selectedPriority, setSelectedPriority] = useState(null); // State for selected priority
   const [selectedSource, setSelectedSource] = useState(null);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  
+  // Custom MultiSelect states
   const [selectedTags, setSelectedTags] = useState([]);
+  const [tagSearchQuery, setTagSearchQuery] = useState('');
+  const [filteredTags, setFilteredTags] = useState([]);
+  const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
+  
   const tagData = useSelector((state) => state.leads.tag);
+  const tagDropdownRef = useRef(null);
   const handleClose = () => setShow(false);
   const handleShow = () => setShow(true);
   const toast = useRef(null);
@@ -43,6 +49,9 @@ function Leads() {
   const [priorityOptions, setPriorityOptions] = useState([]);
   const [sourcesOptions, setSourcesOptions] = useState([]);
   const [employee, setEmployee] = useState([]);
+
+  // Maximum number of tags to show in the MultiSelect display
+  const MAX_VISIBLE_TAGS = 2;
 
   useEffect(() => {
     if (sourcesData && Array.isArray(sourcesData)) {
@@ -64,7 +73,7 @@ function Leads() {
         }))
       );
     }
-  }, []);
+  }, [employeeData]);
 
   useEffect(() => {
     if (priorityData && Array.isArray(priorityData)) {
@@ -82,6 +91,34 @@ function Leads() {
     dispatch(fetchSources());
     dispatch(fetchEmployee());
   }, [dispatch]);
+
+  // Filter tags based on search query
+  useEffect(() => {
+    if (tagData && Array.isArray(tagData)) {
+      if (tagSearchQuery.trim() === '') {
+        setFilteredTags(tagData);
+      } else {
+        const filtered = tagData.filter((tag) => 
+          tag.tagName.toLowerCase().includes(tagSearchQuery.toLowerCase())
+        );
+        setFilteredTags(filtered);
+      }
+    }
+  }, [tagSearchQuery, tagData]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (tagDropdownRef.current && !tagDropdownRef.current.contains(event.target)) {
+        setIsTagDropdownOpen(false);
+      }
+    }
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [tagDropdownRef]);
 
   const APi_Url = import.meta.env.VITE_API_URL;
 
@@ -137,8 +174,6 @@ function Leads() {
   };
 
   const handlebulkUpload = async () => {
-    console.log(selectedPriority);
-
     if (!selectedSource || !selectedPriority) {
       toast.current.show({
         severity: 'warn',
@@ -158,8 +193,6 @@ function Leads() {
       lead.leadAssignedTo = selectedEmployee;
       lead.tags = selectedTags;
     });
-
-    console.log(leadData);
 
     try {
       const AdminId = sessionStorage.getItem("AdminId");
@@ -220,6 +253,47 @@ function Leads() {
 
   const handleEmployeeChange = (e) => {
     setSelectedEmployee(e.value);
+  };
+
+  // Custom MultiSelect functions
+  const toggleTagDropdown = () => {
+    setIsTagDropdownOpen(!isTagDropdownOpen);
+  };
+
+  const handleTagSearchChange = (e) => {
+    setTagSearchQuery(e.target.value);
+  };
+
+  const toggleTagSelection = (tagName) => {
+    if (selectedTags.includes(tagName)) {
+      setSelectedTags(selectedTags.filter(tag => tag !== tagName));
+    } else {
+      setSelectedTags([...selectedTags, tagName]);
+    }
+  };
+
+  const removeTag = (tagToRemove, event) => {
+    if (event) {
+      event.stopPropagation();
+    }
+    setSelectedTags(selectedTags.filter(tag => tag !== tagToRemove));
+  };
+
+  const isTagSelected = (tagName) => {
+    return selectedTags.includes(tagName);
+  };
+
+  // Helper function to truncate tag text if needed
+  const truncateTag = (tag, maxLength = 10) => {
+    return tag.length > maxLength ? `${tag.substring(0, maxLength)}...` : tag;
+  };
+
+  // Function to get the display tags - limited to MAX_VISIBLE_TAGS
+  const getDisplayTags = () => {
+    if (selectedTags.length <= MAX_VISIBLE_TAGS) {
+      return selectedTags;
+    }
+    return [...selectedTags.slice(0, MAX_VISIBLE_TAGS)];
   };
 
   return (
@@ -302,7 +376,6 @@ function Leads() {
               </button><br />
             </div><br />
             <div className='dropdown-option'>
-
               {/* Set zIndex higher on Dropdown to ensure it appears above the Modal */}
               <Dropdown
                 id="priority"
@@ -331,8 +404,8 @@ function Leads() {
             </div><br />
             <div style={{ display: "flex", gap: "10px" }}>
               <Dropdown
-                id="sources"
-                name="sources"
+                id="employee"
+                name="employee"
                 value={selectedEmployee}
                 options={employee}
                 onChange={handleEmployeeChange}
@@ -341,19 +414,167 @@ function Leads() {
                 className="p-dropdown p-component"
                 style={{ width: "50%" }}
               />
-              <MultiSelect
-                id="tags"
-                name="tags"
-                value={selectedTags}
-                options={tagData.map((tag) => ({
-                  label: tag.tagName, // Display text
-                  value: tag.tagName // Unique identifier
-                }))}
-                onChange={(e) => setSelectedTags(e.value)}
-                placeholder="Select tags"
-                className="p-dropdown p-component"
-                style={{ width: '50%' }}
-              />
+              
+              {/* Custom MultiSelect implementation with fixed height */}
+              <div 
+                ref={tagDropdownRef}
+                style={{ 
+                  width: '50%', 
+                  position: 'relative',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"'
+                }}
+              >
+                {/* MultiSelect header with fixed height */}
+                <div 
+                  onClick={toggleTagDropdown}
+                  style={{
+                    border: '1px solid #ced4da',
+                    borderRadius: '4px',
+                    padding: '0.5rem 0.75rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    backgroundColor: 'white',
+                    height: '38px',  // Fixed height
+                    overflow: 'hidden'
+                  }}
+                >
+                  <div style={{ 
+                    display: 'flex', 
+                    flexWrap: 'nowrap', 
+                    gap: '4px',
+                    maxWidth: '90%',
+                    overflow: 'hidden',
+                    alignItems: 'center'
+                  }}>
+                    {selectedTags.length === 0 ? (
+                      <span style={{ color: '#6c757d' }}>Select tags</span>
+                    ) : (
+                      <>
+                        {getDisplayTags().map((tag, index) => (
+                          <div 
+                            key={index}
+                            style={{
+                              backgroundColor: '#e9ecef',
+                              borderRadius: '3px',
+                              padding: '0.2rem 0.5rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              fontSize: '0.875rem',
+                              whiteSpace: 'nowrap',
+                              maxWidth: '80px',  // Limit width
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}
+                          >
+                            {truncateTag(tag)}
+                            <span 
+                              onClick={(e) => removeTag(tag, e)}
+                              style={{
+                                marginLeft: '4px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              ×
+                            </span>
+                          </div>
+                        ))}
+                        {selectedTags.length > MAX_VISIBLE_TAGS && (
+                          <div style={{
+                            backgroundColor: '#e9ecef',
+                            borderRadius: '3px',
+                            padding: '0.2rem 0.5rem',
+                            fontSize: '0.875rem',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            +{selectedTags.length - MAX_VISIBLE_TAGS} more
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  <span style={{ color: '#6c757d' }}>▼</span>
+                </div>
+
+                {/* Dropdown panel */}
+                {isTagDropdownOpen && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    width: '100%',
+                    backgroundColor: 'white',
+                    border: '1px solid #ced4da',
+                    borderRadius: '4px',
+                    marginTop: '4px',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                    zIndex: 1000
+                  }}>
+                    {/* Search input */}
+                    <div style={{ padding: '0.5rem' }}>
+                      <input
+                        type="text"
+                        placeholder="Search tags"
+                        value={tagSearchQuery}
+                        onChange={handleTagSearchChange}
+                        style={{
+                          width: '100%',
+                          padding: '0.5rem',
+                          border: '1px solid #ced4da',
+                          borderRadius: '4px'
+                        }}
+                      />
+                    </div>
+
+                    {/* Selected tags counter */}
+                    {selectedTags.length > 0 && (
+                      <div style={{ 
+                        padding: '0.25rem 0.75rem', 
+                        borderBottom: '1px solid #e9ecef',
+                        fontSize: '0.875rem',
+                        color: '#6c757d'
+                      }}>
+                        {selectedTags.length} item{selectedTags.length !== 1 ? 's' : ''} selected
+                      </div>
+                    )}
+
+                    {/* Options list */}
+                    <div style={{ 
+                      maxHeight: '200px', 
+                      overflowY: 'auto',
+                      padding: '0.5rem 0'
+                    }}>
+                      {filteredTags.map((tag) => (
+                        <div
+                          key={tag._id}
+                          onClick={() => toggleTagSelection(tag.tagName)}
+                          style={{
+                            padding: '0.5rem 1rem',
+                            cursor: 'pointer',
+                            backgroundColor: isTagSelected(tag.tagName) ? '#e9ecef' : 'transparent',
+                            display: 'flex',
+                            alignItems: 'center'
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isTagSelected(tag.tagName)}
+                            onChange={() => {}}
+                            style={{ marginRight: '8px' }}
+                          />
+                          {tag.tagName}
+                        </div>
+                      ))}
+                      {filteredTags.length === 0 && (
+                        <div style={{ padding: '0.5rem 1rem', color: '#6c757d' }}>
+                          No tags found
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div><br />
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
               <button 
