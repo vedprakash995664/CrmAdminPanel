@@ -13,7 +13,7 @@ import { fetchLeads } from "../Features/LeadSlice";
 import { useDispatch, useSelector } from "react-redux";
 
 function EmployeesFullPage() {
-  const APi_Url=import.meta.env.VITE_API_URL
+  const APi_Url = import.meta.env.VITE_API_URL
   const navigate = useNavigate();
   const [isWeekdata, setisWeekdata] = useState(true);
   const [isMonthdata, setisMonthdata] = useState(false);
@@ -23,13 +23,19 @@ function EmployeesFullPage() {
   const EmployeeData = JSON.parse(localStorage.getItem("Employee"));
   const leads = useSelector((state) => state.leads.leads);
   const filteredLead = leads.filter((lead) => lead.deleted === false);
-  console.log("data from here", EmployeeData);   
+  const closedLeads = leads.filter((lead) => lead.closed === true);
   let EmpStatus = "Active";
   if (EmployeeData.blocked === true) {
     EmpStatus = "Blocked";
   }
   const currentEmployeeId = EmployeeData._id;
-  const TotalAssignedLeads = filteredLead.filter((item) => item.leadAssignedTo._id === currentEmployeeId);
+
+const TotalAssignedLeads = filteredLead.filter((item) => 
+  item.leadAssignedTo && item.leadAssignedTo.some(assigned => assigned._id === currentEmployeeId)
+);
+const ClosedLeads = closedLeads.filter((item) => 
+  item.leadAssignedTo && item.leadAssignedTo.some(assigned => assigned._id === currentEmployeeId)
+);
   const [formData, setFormData] = useState({
     Name: EmployeeData?.empName || "",
     Email: EmployeeData?.empEmail || "",
@@ -60,7 +66,7 @@ function EmployeesFullPage() {
     empCountry: formData.Country || "",
   });
   useEffect(() => {
-    dispatch(fetchLeads());  
+    dispatch(fetchLeads());
   }, [dispatch]);
   useEffect(() => {
     const tokenId = sessionStorage.getItem('Token');
@@ -84,7 +90,6 @@ function EmployeesFullPage() {
 
   const handleSave = async () => {
     try {
-      console.log("Saving data", formData);
       const response = await axios.put(
         `${APi_Url}/digicoder/crm/api/v1/employee/update/${currentEmployeeId}`,
         EmployeeDataEdit,  // Sending updated formData directly
@@ -343,7 +348,7 @@ function EmployeesFullPage() {
 
             <div className="report-title">
               <span>EMPLOYEE REPORT</span>
-              <h6 style={{color:"#3454D1"}}>{reportTitle}</h6>
+              <h6 style={{ color: "#3454D1" }}>{reportTitle}</h6>
             </div>
             <div className="report-btn">
               <button className={`weekly ${isWeekdata ? 'active-weekly' : ''}`} onClick={handleWeekData}>Weekly</button>
@@ -376,7 +381,7 @@ function EmployeesFullPage() {
                     <i className="ri-verified-badge-fill" style={{ color: "white" }}></i>
                   </div>
                   <div className="report-card12">
-                    <span style={{ color: "white" }}>Completed Leads</span>
+                    <span style={{ color: "white" }}>{ClosedLeads.length}</span>
                     <p style={{ color: "white" }}>100+</p>
                   </div>
                 </div>
@@ -476,7 +481,7 @@ function EmployeesFullPage() {
                 <div className="report-card1">
                   <div className="report-card11">
                     <UnpublishedIcon style={{ fontSize: "100px" }} />
-                  </div>                                                
+                  </div>
                   <div className="report-card12">
                     <span>Negative Leads</span>
                     <p>30</p>

@@ -100,7 +100,7 @@ function Employee() {
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: 'Yes, block it!',
-            cancelButtonText: 'No, cancel!',
+            cancelButtonText: 'No, cancel!',  
             reverseButtons: true
         });
 

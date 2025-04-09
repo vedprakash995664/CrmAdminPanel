@@ -26,7 +26,7 @@ function FullLeads() {
   const [sourcesOptions, setSourcesOptions] = useState([]);
   const [isDisabled, setIsDisabled] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const APi_Url=import.meta.env.VITE_API_URL
+  const APi_Url = import.meta.env.VITE_API_URL
   const navigate = useNavigate();
   const location = useLocation();
   const { viewdata } = location.state || [];
@@ -47,7 +47,9 @@ function FullLeads() {
     state: viewdata?.state || "",
     country: viewdata?.country || "",
     leadStatus: viewdata?.leadStatus || "",
-    leadAssignedTo: viewdata?.leadAssignedTo?.empName || "",
+    leadAssignedTo: Array.isArray(viewdata?.leadAssignedTo)
+      ? viewdata.leadAssignedTo.map(emp => emp.empName).join(", ")
+      : viewdata?.leadAssignedTo?.empName || "",
     tags: viewdata?.tags || []
   });
 
@@ -181,8 +183,8 @@ function FullLeads() {
       navigate("/Leads");
     }
   };
-const [activeData,setActiveData]=useState()
-  useEffect(()=>{
+  const [activeData, setActiveData] = useState()
+  useEffect(() => {
     if (tableTitle === 'Leads') {
       setActiveData("leads")
     } else if (tableTitle === 'Assigned Leads') {
@@ -225,7 +227,7 @@ const [activeData,setActiveData]=useState()
   const fetchFollowups = async () => {
     try {
       const response = await axios.get(`${APi_Url}/digicoder/crm/api/v1/followup/getall/${viewdata._id}`);
-      setFollowUps(response.data.followups); 
+      setFollowUps(response.data.followups);
     } catch (error) {
       console.log(error);
     }
@@ -428,14 +430,11 @@ const [activeData,setActiveData]=useState()
                   </div>
                   <div>
                     <div className="label">Assigned To</div>
-                    <input
-                      type="text"
-                      className="input-field"
+                    <textarea className="input-field"
                       name="leadAssignedTo"
                       value={formData.leadAssignedTo}
                       onChange={handleChange}
-                      disabled
-                    />
+                      disabled></textarea>
                   </div>
                 </div>
 
@@ -455,11 +454,11 @@ const [activeData,setActiveData]=useState()
               </div>
 
               <div className="follow-ups">
-                {followUps.map((followUp,index) => (
+                {followUps.map((followUp, index) => (
                   <div key={followUp.id} className="follow-outer">
                     <div className="follow-body">
                       <div className="follow-body-header">
-                        <div className="followup-srNo">{index+1}</div>
+                        <div className="followup-srNo">{index + 1}</div>
                         <div>
                           <span className="cratedBy">Created Date-</span>
                           <span className="cratedBy">{followUp.createdAt.split("T")[0]}</span>

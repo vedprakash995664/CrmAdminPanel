@@ -150,11 +150,11 @@ export default function DynamicTable({ lead, tableTitle }) {
     // Handle range selection
     const handleRangeSelection = () => {
         if (rangeStart < 1 || rangeEnd > filteredLeads.length || rangeStart > rangeEnd) {
-            toast.current.show({ 
-                severity: 'warn', 
-                summary: 'Invalid Range', 
-                detail: `Please enter a valid range between 1 and ${filteredLeads.length}`, 
-                life: 3000 
+            toast.current.show({
+                severity: 'warn',
+                summary: 'Invalid Range',
+                detail: `Please enter a valid range between 1 and ${filteredLeads.length}`,
+                life: 3000
             });
             return;
         }
@@ -168,15 +168,15 @@ export default function DynamicTable({ lead, tableTitle }) {
         for (let i = rangeStart - 1; i < rangeEnd && i < filteredLeads.length; i++) {
             newSelectedRows.push(filteredLeads[i]);
         }
-        
+
         setSelectedRows(newSelectedRows);
         closeRangeModal();
-        
-        toast.current.show({ 
-            severity: 'success', 
-            summary: 'Range Selected', 
-            detail: `Selected ${newSelectedRows.length} leads from range ${rangeStart} to ${rangeEnd}`, 
-            life: 3000 
+
+        toast.current.show({
+            severity: 'success',
+            summary: 'Range Selected',
+            detail: `Selected ${newSelectedRows.length} leads from range ${rangeStart} to ${rangeEnd}`,
+            life: 3000
         });
     };
 
@@ -193,15 +193,15 @@ export default function DynamicTable({ lead, tableTitle }) {
                             id="selectAllCheckbox"
                         />
                         <label htmlFor="selectAllCheckbox" style={{ marginLeft: '5px' }}>Select All</label>
-                       
-                        <button 
-                            onClick={openRangeModal} 
-                            style={{ 
-                                marginLeft: '15px', 
-                                backgroundColor: '#EDF1FF', 
-                                color: '#3454D1', 
-                                border: 'none', 
-                                borderRadius: '4px', 
+
+                        <button
+                            onClick={openRangeModal}
+                            style={{
+                                marginLeft: '15px',
+                                backgroundColor: '#EDF1FF',
+                                color: '#3454D1',
+                                border: 'none',
+                                borderRadius: '4px',
                                 padding: '4px 8px',
                                 cursor: 'pointer'
                             }}
@@ -359,7 +359,7 @@ export default function DynamicTable({ lead, tableTitle }) {
     return (
         <div className="card">
             <Toast ref={toast} />
-            
+
             {loading ? (
                 <Loader />
             ) : (
@@ -403,7 +403,32 @@ export default function DynamicTable({ lead, tableTitle }) {
                     <Column field="phone" header="PHONE" sortable style={{ width: '15%' }} />
                     <Column field="priority" header="PRIORITY" sortable style={{ width: '10%', textAlign: "center" }} />
                     <Column field="sources" header="Sources" sortable style={{ width: '15%' }} />
-                    <Column header="Assigned TO" body={(rowData) => rowData.leadAssignedTo?.empName || "NA"} style={{ width: '20%' }} />
+                    <Column
+                        header="Assigned TO"
+                        body={(rowData) => {
+                            // If there's no leadAssignedTo or it's not an array
+                            if (!rowData.leadAssignedTo) return "NA";
+
+                            // If leadAssignedTo is an array of employee objects
+                            if (Array.isArray(rowData.leadAssignedTo)) {
+                                // Filter out any undefined or null values
+                                const validNames = rowData.leadAssignedTo
+                                    .map(emp => emp.empName)
+                                    .filter(name => name);
+
+                                // Show only first two names plus "..." if more exist
+                                if (validNames.length <= 2) {
+                                    return validNames.join(", ") || "NA";
+                                } else {
+                                    return `${validNames[0]}, ${validNames[1]}.....`;
+                                }
+                            }
+
+                            // If it's a single employee object (current implementation)
+                            return rowData.leadAssignedTo.empName || "NA";
+                        }}
+                        style={{ width: '20%' }}
+                    />
                     <Column header="ACTION" body={actionBodyTemplate} style={{ width: '15%' }} />
                 </DataTable>
             )}
@@ -431,15 +456,15 @@ export default function DynamicTable({ lead, tableTitle }) {
                     }}>
                         <h3>Select Leads by Range</h3>
                         <p>Total available leads: {filteredLeads.length}</p>
-                        
+
                         <div style={{ marginBottom: '15px' }}>
                             <label style={{ display: 'block', marginBottom: '5px' }}>Start (From):</label>
-                            <input 
-                                type="number" 
-                                value={rangeStart} 
+                            <input
+                                type="number"
+                                value={rangeStart}
                                 onChange={(e) => setRangeStart(parseInt(e.target.value) || 1)}
-                                min="1" 
-                                max={filteredLeads.length} 
+                                min="1"
+                                max={filteredLeads.length}
                                 style={{
                                     width: '100%',
                                     padding: '8px',
@@ -448,15 +473,15 @@ export default function DynamicTable({ lead, tableTitle }) {
                                 }}
                             />
                         </div>
-                        
+
                         <div style={{ marginBottom: '20px' }}>
                             <label style={{ display: 'block', marginBottom: '5px' }}>End (To):</label>
-                            <input 
-                                type="number" 
-                                value={rangeEnd} 
+                            <input
+                                type="number"
+                                value={rangeEnd}
                                 onChange={(e) => setRangeEnd(parseInt(e.target.value) || rangeStart)}
-                                min={rangeStart} 
-                                max={filteredLeads.length} 
+                                min={rangeStart}
+                                max={filteredLeads.length}
                                 style={{
                                     width: '100%',
                                     padding: '8px',
@@ -465,9 +490,9 @@ export default function DynamicTable({ lead, tableTitle }) {
                                 }}
                             />
                         </div>
-                        
+
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                            <button 
+                            <button
                                 onClick={closeRangeModal}
                                 style={{
                                     padding: '8px 16px',
@@ -479,7 +504,7 @@ export default function DynamicTable({ lead, tableTitle }) {
                             >
                                 Cancel
                             </button>
-                            <button 
+                            <button
                                 onClick={handleRangeSelection}
                                 style={{
                                     padding: '8px 16px',
