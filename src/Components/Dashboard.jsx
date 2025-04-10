@@ -83,14 +83,14 @@ const Dashboard = ({ children, active }) => {
             <Link className="navigation-link" to="/assignedLeads">
               <li>
                 <button className={`sidebar-link ${active === 'assigned' && 'active'}`}>
-                <i class="ri-verified-badge-fill"></i>&nbsp;Assigned Leads
+                <i className="ri-user-follow-line"></i>&nbsp;Assigned Leads
                 </button>
               </li>
             </Link>
             <Link className="navigation-link" to="/unassignedLeads">
               <li>
                 <button className={`sidebar-link ${active === 'unassigned' && 'active'}`}>
-                <i class="ri-chat-off-fill"></i> &nbsp;Unassigned Leads
+                <i className="ri-user-unfollow-line"></i> &nbsp;Unassigned Leads
                 </button>
               </li>
             </Link>

@@ -1,39 +1,41 @@
 import React, { useState, useEffect } from "react";
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { toast, ToastContainer } from 'react-toastify'; // Import Toastify
+import 'react-toastify/dist/ReactToastify.css'; // Import Toastify CSS
 import { useNavigate } from "react-router-dom";
+import { BarChart } from '@mui/x-charts/BarChart';
 import PendingActionsIcon from '@mui/icons-material/PendingActions';
 import './CSS/EmployeesFullPage.css';
 import UnpublishedIcon from '@mui/icons-material/Unpublished';
 import Dashboard from '../Components/Dashboard';
 import axios from "axios";
-import Swal from 'sweetalert2';
+import Swal from 'sweetalert2'; // Import SweetAlert2
 import { fetchLeads } from "../Features/LeadSlice";
 import { useDispatch, useSelector } from "react-redux";
 
 function EmployeesFullPage() {
   const APi_Url = import.meta.env.VITE_API_URL
   const navigate = useNavigate();
+  const [isWeekdata, setisWeekdata] = useState(true);
+  const [isMonthdata, setisMonthdata] = useState(false);
+  const [isYeardata, setisYeardata] = useState(false);
   const dispatch = useDispatch();
+  const [reportTitle, setReportTitle] = useState('Weekly Report');
   const EmployeeData = JSON.parse(localStorage.getItem("Employee"));
   const leads = useSelector((state) => state.leads.leads);
   const filteredLead = leads.filter((lead) => lead.deleted === false);
   const closedLeads = leads.filter((lead) => lead.closed === true);
-  const NegativeLeads = leads.filter((lead) => lead.negative === true);
   let EmpStatus = "Active";
   if (EmployeeData.blocked === true) {
     EmpStatus = "Blocked";
   }
   const currentEmployeeId = EmployeeData._id;
 
-  const TotalAssignedLeads = filteredLead.filter((item) => 
-    item.leadAssignedTo && item.leadAssignedTo.some(assigned => assigned._id === currentEmployeeId)
-  );
-  const ClosedLeads = closedLeads.filter((item) => 
-    item.leadAssignedTo && item.leadAssignedTo.some(assigned => assigned._id === currentEmployeeId)
-  );
-  
-  const PendingLeads = TotalAssignedLeads.filter(lead => !lead.closed && !lead.negative===true);
+const TotalAssignedLeads = filteredLead.filter((item) => 
+  item.leadAssignedTo && item.leadAssignedTo.some(assigned => assigned._id === currentEmployeeId)
+);
+const ClosedLeads = closedLeads.filter((item) => 
+  item.leadAssignedTo && item.leadAssignedTo.some(assigned => assigned._id === currentEmployeeId)
+);
   const [formData, setFormData] = useState({
     Name: EmployeeData?.empName || "",
     Email: EmployeeData?.empEmail || "",
@@ -63,11 +65,9 @@ function EmployeesFullPage() {
     empZipCode: formData.ZipCode || "",
     empCountry: formData.Country || "",
   });
-  
   useEffect(() => {
     dispatch(fetchLeads());
   }, [dispatch]);
-  
   useEffect(() => {
     const tokenId = sessionStorage.getItem('Token');
     if (!tokenId) {
@@ -92,7 +92,7 @@ function EmployeesFullPage() {
     try {
       const response = await axios.put(
         `${APi_Url}/digicoder/crm/api/v1/employee/update/${currentEmployeeId}`,
-        EmployeeDataEdit,
+        EmployeeDataEdit,  // Sending updated formData directly
         {
           headers: { 'Content-Type': 'application/json' },
         }
@@ -112,6 +112,31 @@ function EmployeesFullPage() {
   const handleBack = () => {
     navigate('/employee');
     localStorage.removeItem("Employee");
+  };
+
+  const [data, setData] = useState([60, 50, 15, 25]);
+  const handleMonthData = () => {
+    setReportTitle('MONTHLY-REPORT');
+    setisWeekdata(false);
+    setisYeardata(false);
+    setisMonthdata(true);
+    setData([200, 180, 10, 40]);
+  };
+
+  const handleWeekData = () => {
+    setReportTitle('WEEKLY-REPORT');
+    setisWeekdata(true);
+    setisYeardata(false);
+    setisMonthdata(false);
+    setData([60, 50, 15, 25]);
+  };
+
+  const handleYearData = () => {
+    setReportTitle('YEARLY-REPORT');
+    setisWeekdata(false);
+    setisYeardata(true);
+    setisMonthdata(false);
+    setData([500, 400, 80, 10]);
   };
 
   const handleBlock = async () => {
@@ -323,46 +348,147 @@ function EmployeesFullPage() {
 
             <div className="report-title">
               <span>EMPLOYEE REPORT</span>
+              <h6 style={{ color: "#3454D1" }}>{reportTitle}</h6>
             </div>
+            <div className="report-btn">
+              <button className={`weekly ${isWeekdata ? 'active-weekly' : ''}`} onClick={handleWeekData}>Weekly</button>
+              <button className={`monthly ${isMonthdata ? 'active-monthly' : ''}`} onClick={handleMonthData}>Monthly</button>
+              <button className={`yearly ${isYeardata ? 'active-yearly' : ''}`} onClick={handleYearData}>Yearly</button>
+            </div>
+            {/* <div className="report-chart">
+              <BarChart
+                series={[{ data: data }]}
+                height={290}
+                xAxis={[{ data: ['Total Assigned Leads', 'Completed Leads', 'Pending Leads', 'Negative Leads'], scaleType: 'band' }]}
+                margin={{ top: 10, bottom: 30, left: 40, right: 10 }}
+              />
+            </div> */}
 
-            <div className="report-bottom">
-              <div className="report-card1">
-                <div className="report-card11">
-                  <i className="ri-information-2-fill"></i>
+            {/* Weekly Report */}
+            {isWeekdata && (
+              <div className="report-bottom">
+                <div className="report-card1">
+                  <div className="report-card11">
+                    <i className="ri-information-2-fill"></i>
+                  </div>
+                  <div className="report-card12">
+                    <span>Assigned Leads</span>
+                    <p>{TotalAssignedLeads.length}</p>
+                  </div>
                 </div>
-                <div className="report-card12">
-                  <span>Assigned Leads</span>
-                  <p>{TotalAssignedLeads.length}</p>
+                <div className="report-card1" style={{ backgroundColor: "#3454D1", color: "white" }}>
+                  <div className="report-card11">
+                    <i className="ri-verified-badge-fill" style={{ color: "white" }}></i>
+                  </div>
+                  <div className="report-card12">
+                    <span style={{ color: "white" }}>{ClosedLeads.length}</span>
+                    <p style={{ color: "white" }}>100+</p>
+                  </div>
+                </div>
+                <div className="report-card1" style={{ backgroundColor: "#3454D1" }}>
+                  <div className="report-card11">
+                    <PendingActionsIcon style={{ fontSize: "100px", color: "white" }} />
+                  </div>
+                  <div className="report-card12">
+                    <span style={{ color: "white" }}>Pending Leads</span>
+                    <p style={{ color: "white" }}>100+</p>
+                  </div>
+                </div>
+                <div className="report-card1">
+                  <div className="report-card11">
+                    <UnpublishedIcon style={{ fontSize: "100px" }} />
+                  </div>
+                  <div className="report-card12">
+                    <span>Negative Leads</span>
+                    <p>100+</p>
+                  </div>
                 </div>
               </div>
-              <div className="report-card1" style={{ backgroundColor: "#3454D1", color: "white" }}>
-                <div className="report-card11">
-                  <i className="ri-verified-badge-fill" style={{ color: "white" }}></i>
+            )}
+
+            {/* Monthly Report */}
+            {isMonthdata && (
+              <div className="report-bottom">
+                <div className="report-card1" style={{ backgroundColor: "#3454D1", color: "white" }}>
+                  <div className="report-card11">
+                    <i className="ri-information-2-fill" style={{ color: "white" }}></i>
+                  </div>
+                  <div className="report-card12">
+                    <span style={{ color: "white" }}>Assigned Leads</span>
+                    <p style={{ color: "white" }}>300+</p>
+                  </div>
                 </div>
-                <div className="report-card12">
-                  <span style={{ color: "white" }}>Completed Leads</span>
-                  <p style={{ color: "white" }}>{ClosedLeads.length}</p>
+                <div className="report-card1">
+                  <div className="report-card11">
+                    <i className="ri-verified-badge-fill"></i>
+                  </div>
+                  <div className="report-card12">
+                    <span>Completed Leads</span>
+                    <p>230+</p>
+                  </div>
+                </div>
+                <div className="report-card1">
+                  <div className="report-card11">
+                    <PendingActionsIcon style={{ fontSize: "100px" }} />
+                  </div>
+                  <div className="report-card12">
+                    <span>Pending Leads</span>
+                    <p>60+</p>
+                  </div>
+                </div>
+                <div className="report-card1" style={{ backgroundColor: "#3454D1" }}>
+                  <div className="report-card11">
+                    <UnpublishedIcon style={{ fontSize: "100px", color: "white" }} />
+                  </div>
+                  <div className="report-card12">
+                    <span style={{ color: "white" }}>Negative Leads</span>
+                    <p style={{ color: "white" }}>10</p>
+                  </div>
                 </div>
               </div>
-              <div className="report-card1" style={{ backgroundColor: "#3454D1" }}>
-                <div className="report-card11">
-                  <PendingActionsIcon style={{ fontSize: "100px", color: "white" }} />
+            )}
+
+            {/* Yearly Report */}
+            {isYeardata && (
+              <div className="report-bottom">
+                <div className="report-card1">
+                  <div className="report-card11">
+                    <i className="ri-information-2-fill"></i>
+                  </div>
+                  <div className="report-card12">
+                    <span>Assigned Leads</span>
+                    <p>100+</p>
+                  </div>
                 </div>
-                <div className="report-card12">
-                  <span style={{ color: "white" }}>Pending Leads</span>
-                  <p style={{ color: "white" }}>{PendingLeads.length}</p>
+                <div className="report-card1" style={{ backgroundColor: "#3454D1", color: "white" }}>
+                  <div className="report-card11">
+                    <i className="ri-verified-badge-fill" style={{ color: "white" }}></i>
+                  </div>
+                  <div className="report-card12">
+                    <span style={{ color: "white" }}>Completed Leads</span>
+                    <p style={{ color: "white" }}>200+</p>
+                  </div>
+                </div>
+                <div className="report-card1" style={{ backgroundColor: "#3454D1" }}>
+                  <div className="report-card11">
+                    <PendingActionsIcon style={{ fontSize: "100px", color: "white" }} />
+                  </div>
+                  <div className="report-card12">
+                    <span style={{ color: "white" }}>Pending Leads</span>
+                    <p style={{ color: "white" }}>50+</p>
+                  </div>
+                </div>
+                <div className="report-card1">
+                  <div className="report-card11">
+                    <UnpublishedIcon style={{ fontSize: "100px" }} />
+                  </div>
+                  <div className="report-card12">
+                    <span>Negative Leads</span>
+                    <p>30</p>
+                  </div>
                 </div>
               </div>
-              <div className="report-card1">
-                <div className="report-card11">
-                  <UnpublishedIcon style={{ fontSize: "100px" }} />
-                </div>
-                <div className="report-card12">
-                  <span>Negative Leads</span>
-                  <p>{NegativeLeads.length}</p>
-                </div>
-              </div>
-            </div>
+            )}
 
           </div>
         </div>

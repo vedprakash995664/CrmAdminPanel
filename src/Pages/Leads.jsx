@@ -309,7 +309,7 @@ function Leads() {
                 style={{ display: 'none' }}
                 id="import-excel"
               />
-              <button onClick={handleShow}>Import</button>
+              <button onClick={handleShow}>Import Leads</button>
               <button onClick={handleAdd}>Add Lead</button>
             </div>
           </div>
