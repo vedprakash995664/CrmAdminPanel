@@ -469,8 +469,9 @@ function FullLeads() {
                         </div>
                       </div>
                       <div className="follow-ups-txt">
-                        <p>{followUp.followupMessage
-                        }</p>
+                        <p><b>Message:- </b><span>{followUp.followupMessage}</span></p>
+                        <p><b>Priority:- </b><span>{followUp.priority}</span></p>
+                        <p><b>followupStatus:- </b><span>{followUp.followupStatus}</span></p>
                       </div>
                     </div>
                     <hr />
