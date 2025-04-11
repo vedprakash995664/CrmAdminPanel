@@ -417,7 +417,7 @@ function FullLeads() {
                       </Select>
                     </FormControl>
                   </div>
-                  <div>
+                  {/* <div>
                     <div className="label">Lead Status</div>
                     <input
                       type="text"
@@ -427,7 +427,7 @@ function FullLeads() {
                       onChange={handleChange}
                       disabled={isDisabled}
                     />
-                  </div>
+                  </div> */}
                   <div>
                     <div className="label">Assigned To</div>
                     <textarea className="input-field"
