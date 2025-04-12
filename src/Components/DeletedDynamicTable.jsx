@@ -104,7 +104,7 @@ export default function DeletedDynamicTable({ lead, tableTitle }) {
                 rows={rows}
                 first={first}
                 paginator
-                dataKey="id"
+                dataKey="._id"
                 filters={filters}
                 filterDisplay="row"
                 globalFilterFields={['name', 'phone', 'priority', 'sources', 'leadAssignedTo']}
@@ -127,8 +127,25 @@ export default function DeletedDynamicTable({ lead, tableTitle }) {
                 />
                 <Column field="name" header="NAME" sortable style={{ width: '15%' }} />
                 <Column field="phone" header="PHONE" sortable style={{ width: '15%' }} />
-                <Column field="priority" header="PRIORITY" sortable style={{ width: '10%', textAlign: "center" }} />
-                <Column field="sources" header="Sources" sortable style={{ width: '15%' }} />
+                <Column
+                                       header="PRIORITY"
+                                       body={(rowData) => {
+                                           if (!rowData.priority) return "NA";
+                                           return rowData.priority?.priorityText || "NA";
+                                       }}
+                                       sortable
+                                       style={{ width: '10%', textAlign: "center" }}
+                                   />
+               
+                                   <Column
+                                       header="Sources"
+                                       body={(rowData) => {
+                                           if (!rowData.sources) return "NA";
+                                           return rowData.sources?.leadSourcesText || "NA";
+                                       }}
+                                       sortable
+                                       style={{ width: '15%' }}
+                                   />
                 <Column
                     header="Assigned TO"
                     body={(rowData) => rowData.leadAssignedTo?.empName || "NA"}

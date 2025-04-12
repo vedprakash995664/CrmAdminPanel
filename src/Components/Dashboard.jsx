@@ -76,7 +76,7 @@ const Dashboard = ({ children, active }) => {
             <Link className="navigation-link" to="/Leads">
               <li>
                 <button className={`sidebar-link ${active === 'leads' && 'active'}`}>
-                <i class="ri-information-2-fill"></i> &nbsp;Leads
+                <i className="ri-information-2-fill"></i> &nbsp;Leads
                 </button>
               </li>
             </Link>

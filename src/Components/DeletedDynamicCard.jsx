@@ -116,8 +116,8 @@ export default function DeletedDynamicCard({ lead, tableTitle }) {
                             <div className="lead-card-body">
                                 <p><strong>Name:</strong> {rowData.name}</p>
                                 <p><strong>Phone:</strong> {rowData.phone}</p>
-                                <p><strong>Priority:</strong> {rowData.priority}</p>
-                                <p><strong>Source:</strong> {rowData.sources}</p>
+                                <p><strong>Priority:</strong> {rowData.priority.priorityText}</p>
+                                <p><strong>Source:</strong> {rowData.sources.leadSourcesText}</p>
                                 <p><strong>Assigned To:</strong> {rowData.leadAssignedTo?.empName}</p>
                             </div>
                             <div className="lead-card-actions">

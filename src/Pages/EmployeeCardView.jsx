@@ -251,7 +251,7 @@ function EmployeeCardView() {
                                     <button onClick={() => handleEdit(employee)} style={{ border: "none", borderRadius: "5px", color: "white", fontWeight: "bold", backgroundColor: "#4CAF50" }}>
                                         Edit
                                     </button>
-                                    <button onClick={() => handleDelete(employee)} style={{ border: "none", borderRadius: "5px", color: "white", fontWeight: "bold", backgroundColor: "red" }}>
+                                    <button onClick={() => handleBlock(employee)} style={{ border: "none", borderRadius: "5px", color: "white", fontWeight: "bold", backgroundColor: "red" }}>
                                         Delete
                                     </button>
                                     <button onClick={() => handleView(employee)} style={{ border: "none", borderRadius: "5px", color: "white", fontWeight: "bold", backgroundColor: "#3454D1" }}>

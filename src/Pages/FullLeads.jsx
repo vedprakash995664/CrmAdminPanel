@@ -26,13 +26,12 @@ function FullLeads() {
   const [sourcesOptions, setSourcesOptions] = useState([]);
   const [isDisabled, setIsDisabled] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const APi_Url = import.meta.env.VITE_API_URL
+  const APi_Url = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
   const location = useLocation();
-  const { viewdata } = location.state || [];
+  const { viewdata } = location.state || {};
   const { tableTitle } = location.state || {};
   const { fromEdit } = location.state || {};
-  const [selectedTags, setSelectedTags] = useState(viewdata?.tags || []);
 
   const [formData, setFormData] = useState({
     name: viewdata?.name || "",
@@ -40,8 +39,10 @@ function FullLeads() {
     Phone: viewdata?.phone || "",
     gender: viewdata?.gender || "",
     dob: viewdata?.dob || "",
-    priority: viewdata?.priority || "",
-    sources: viewdata?.sources || "",
+    priority: viewdata?.priority?._id || "",
+    priorityText: viewdata?.priority?.priorityText || "",
+    sources: viewdata?.sources?._id || "",
+    sourcesText: viewdata?.sources?.leadSourcesText || "",
     city: viewdata?.city || "",
     zipCode: viewdata?.zipCode || "",
     state: viewdata?.state || "",
@@ -50,7 +51,12 @@ function FullLeads() {
     leadAssignedTo: Array.isArray(viewdata?.leadAssignedTo)
       ? viewdata.leadAssignedTo.map(emp => emp.empName).join(", ")
       : viewdata?.leadAssignedTo?.empName || "",
-    tags: viewdata?.tags || []
+    tags: Array.isArray(viewdata?.tags)
+      ? viewdata.tags.map(tag => tag._id)
+      : viewdata?.tags?._id ? [viewdata.tags._id] : [],
+    tagNames: Array.isArray(viewdata?.tags)
+      ? viewdata.tags.map(tag => tag.tagName)
+      : viewdata?.tags?.tagName ? [viewdata.tags.tagName] : []
   });
 
   const FormApiData = {
@@ -65,9 +71,8 @@ function FullLeads() {
     state: formData.state,
     country: formData.country,
     leadStatus: formData.leadStatus,
-    tags: selectedTags
+    tags: formData.tags
   };
-
 
   useEffect(() => {
     dispatch(fetchPriority());
@@ -79,8 +84,9 @@ function FullLeads() {
     if (priorityData && Array.isArray(priorityData)) {
       setPriorityOptions(
         priorityData.map((priority) => ({
+          _id: priority._id,
           label: priority.priorityText,
-          value: priority.priorityText
+          value: priority._id
         }))
       );
     }
@@ -90,8 +96,9 @@ function FullLeads() {
     if (sourcesData && Array.isArray(sourcesData)) {
       setSourcesOptions(
         sourcesData.map((sources) => ({
+          _id: sources._id,
           label: sources.leadSourcesText,
-          value: sources.leadSourcesText
+          value: sources._id
         }))
       );
     }
@@ -121,10 +128,14 @@ function FullLeads() {
 
   const handleTagChange = (event) => {
     const { value } = event.target;
-    setSelectedTags(value);
-    setFormData(prevData => ({
-      ...prevData,
-      tags: value
+    const selectedTagIds = tagData
+      .filter(tag => value.includes(tag.tagName))
+      .map(tag => tag._id);
+
+    setFormData(prev => ({
+      ...prev,
+      tagNames: value,
+      tags: selectedTagIds
     }));
   };
 
@@ -139,9 +150,6 @@ function FullLeads() {
   };
 
   const handleSave = async () => {
-    console.log("Saving sdschuydata", FormApiData);
-    console.log(viewdata._id);
-
     try {
       const response = await axios.put(
         `${APi_Url}/digicoder/crm/api/v1/lead/update/${viewdata._id}`,
@@ -159,7 +167,6 @@ function FullLeads() {
           navigate('/leads')
         }, 500)
       } else {
-        console.log(response);
         toast.error("Failed to update the lead. Please try again.");
       }
 
@@ -183,7 +190,8 @@ function FullLeads() {
       navigate("/Leads");
     }
   };
-  const [activeData, setActiveData] = useState()
+
+  const [activeData, setActiveData] = useState();
   useEffect(() => {
     if (tableTitle === 'Leads') {
       setActiveData("leads")
@@ -194,7 +202,7 @@ function FullLeads() {
     } else if (tableTitle === 'dashboard') {
       setActiveData("dashboard")
     }
-  })
+  }, [tableTitle]);
 
   const handleDelete = async () => {
     Swal.fire({
@@ -224,6 +232,8 @@ function FullLeads() {
     });
   };
 
+  const [followUps, setFollowUps] = useState([]);
+
   const fetchFollowups = async () => {
     try {
       const response = await axios.get(`${APi_Url}/digicoder/crm/api/v1/followup/getall/${viewdata._id}`);
@@ -233,11 +243,9 @@ function FullLeads() {
     }
   }
 
-  const [followUps, setFollowUps] = useState([]);
-
   useEffect(() => {
-    fetchFollowups()
-  }, [])
+    fetchFollowups();
+  }, []);
 
   return (
     <div>
@@ -329,7 +337,14 @@ function FullLeads() {
                       name="priority"
                       value={formData.priority}
                       options={priorityOptions}
-                      onChange={(e) => handleChange({ target: { name: 'priority', value: e.value } })}
+                      onChange={(e) => {
+                        const selectedPriority = priorityOptions.find(p => p._id === e.value);
+                        handleChange({ target: { name: 'priority', value: e.value } });
+                        setFormData(prev => ({
+                          ...prev,
+                          priorityText: selectedPriority?.label || ""
+                        }));
+                      }}
                       optionLabel="label"
                       disabled={isDisabled}
                       placeholder="Select priority"
@@ -343,7 +358,14 @@ function FullLeads() {
                       name="sources"
                       value={formData.sources}
                       options={sourcesOptions}
-                      onChange={(e) => handleChange({ target: { name: 'sources', value: e.value } })}
+                      onChange={(e) => {
+                        const selectedSource = sourcesOptions.find(s => s._id === e.value);
+                        handleChange({ target: { name: 'sources', value: e.value } });
+                        setFormData(prev => ({
+                          ...prev,
+                          sourcesText: selectedSource?.label || ""
+                        }));
+                      }}
                       optionLabel="label"
                       disabled={isDisabled}
                       placeholder="Select source"
@@ -401,7 +423,7 @@ function FullLeads() {
                         labelId="tags-label"
                         id="tags-select"
                         multiple
-                        value={selectedTags}
+                        value={formData.tagNames}
                         onChange={handleTagChange}
                         input={<OutlinedInput label="Tags" />}
                         renderValue={(selected) => selected.join(', ')}
@@ -409,25 +431,14 @@ function FullLeads() {
                         disabled={isDisabled}
                       >
                         {tagData.map((item) => (
-                          <MenuItem key={item.tagName} value={item.tagName}>
-                            <Checkbox checked={selectedTags.indexOf(item.tagName) > -1} />
+                          <MenuItem key={item._id} value={item.tagName}>
+                            <Checkbox checked={formData.tagNames.indexOf(item.tagName) > -1} />
                             <ListItemText primary={item.tagName} />
                           </MenuItem>
                         ))}
                       </Select>
                     </FormControl>
                   </div>
-                  {/* <div>
-                    <div className="label">Lead Status</div>
-                    <input
-                      type="text"
-                      className="input-field"
-                      name="leadStatus"
-                      value={formData.leadStatus}
-                      onChange={handleChange}
-                      disabled={isDisabled}
-                    />
-                  </div> */}
                   <div>
                     <div className="label">Assigned To</div>
                     <textarea className="input-field"
@@ -455,7 +466,7 @@ function FullLeads() {
 
               <div className="follow-ups">
                 {followUps.map((followUp, index) => (
-                  <div key={followUp.id} className="follow-outer">
+                  <div key={followUp._id} className="follow-outer">
                     <div className="follow-body">
                       <div className="follow-body-header">
                         <div className="followup-srNo">{index + 1}</div>
@@ -470,8 +481,8 @@ function FullLeads() {
                       </div>
                       <div className="follow-ups-txt">
                         <p><b>Message:- </b><span>{followUp.followupMessage}</span></p>
-                        <p><b>Priority:- </b><span>{followUp.priority}</span></p>
-                        <p><b>followupStatus:- </b><span>{followUp.followupStatus}</span></p>
+                        <p><b>Priority:- </b><span>{followUp.priority?.priorityText || "NA"}</span></p>
+                        <p><b>followupStatus:- </b><span>{followUp.followupStatus?.leadStatusText || "NA"}</span></p>
                       </div>
                     </div>
                     <hr />

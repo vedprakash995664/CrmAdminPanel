@@ -20,7 +20,7 @@ function UnassignedLeads() {
 
   const dispatch = useDispatch();
   const leads = useSelector((state) => state.leads.leads);
-  const filteredLead=leads.filter((lead)=>lead.deleted===false && !lead.leadAssignedTo)
+  const filteredLead=leads.filter((lead)=>lead.deleted===false && lead.leadAssignedTo?.length===0)
   // Close modal
   const closeModal = () => {
     setIsModalOpen(false);

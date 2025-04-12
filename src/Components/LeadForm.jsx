@@ -43,7 +43,7 @@ const LeadForm = ({ isOpen, onClose, title, buttonTitle, leadData }) => {
       setPriorityOptions(
         priorityData.map((priority) => ({
           label: priority.priorityText,
-          value: priority.priorityText
+          value: priority._id
         }))
       );
     }
@@ -54,7 +54,7 @@ const LeadForm = ({ isOpen, onClose, title, buttonTitle, leadData }) => {
       setSourcesOptions(
         sourcesData.map((sources) => ({
           label: sources.leadSourcesText,
-          value: sources.leadSourcesText
+          value: sources._id
         }))
       );
     }
@@ -64,8 +64,8 @@ const LeadForm = ({ isOpen, onClose, title, buttonTitle, leadData }) => {
     if (tagData && Array.isArray(tagData)) {
       setTagsOptions(
         tagData.map((tag) => ({
-          label: tag.tagText || tag.tagName,
-          value: tag.tagName || tag.tagText
+          label: tag.tagName,
+          value: tag._id 
         }))
       );
     }

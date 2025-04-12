@@ -61,13 +61,21 @@ export default function DynamicCard({ lead, tableTitle }) {
     };
 
     const filteredLeads = lead.filter((rowData) => {
-        const match = filters.global.value ? rowData.name.toLowerCase().includes(filters.global.value.toLowerCase()) ||
-            rowData.phone.toLowerCase().includes(filters.global.value.toLowerCase()) ||
-            rowData.priority.toLowerCase().includes(filters.global.value.toLowerCase()) ||
-            rowData.source.toLowerCase().includes(filters.global.value.toLowerCase())
-            : true;
-        return match;
+        const searchValue = filters.global.value?.toLowerCase();
+    
+        if (!searchValue) return true; // No global filter? Return all.
+    
+        return (
+            rowData.name?.toLowerCase().includes(searchValue) ||
+            rowData.phone?.toLowerCase().includes(searchValue) ||
+            rowData.priority?.priorityText?.toLowerCase().includes(searchValue) ||
+            rowData.sources?.leadSourcesText?.toLowerCase().includes(searchValue) ||
+            rowData.leadAssignedTo?.empName?.toLowerCase().includes(searchValue) ||
+            (Array.isArray(rowData.tags) &&
+                rowData.tags.some(tag => String(tag).toLowerCase().includes(searchValue)))
+        );
     });
+    
 
     const openModal = (isEdit) => {
         setEditMode(isEdit);
@@ -159,7 +167,7 @@ export default function DynamicCard({ lead, tableTitle }) {
             <div className="card-container">
                 {Array.isArray(filteredLeads) && filteredLeads.length > 0 ? (
                     filteredLeads.map((rowData, index) => (
-                        <div className="lead-card" key={rowData.id}>
+                        <div className="lead-card" key={rowData._id}>
                             <div className="lead-card-header">
                                 <input
                                     type="checkbox"
@@ -171,9 +179,8 @@ export default function DynamicCard({ lead, tableTitle }) {
                             <div className="lead-card-body">
                                 <p><strong>Name:</strong> {rowData.name}</p>
                                 <p><strong>Phone:</strong> {rowData.phone}</p>
-                                <p><strong>Priority:</strong> {rowData.priority}</p>
-                                <p><strong>Source:</strong> {rowData.sources}</p>
-                                <p><strong>Assigned To:</strong> {rowData.leadAssignedTo?.empName}</p>
+                                <p><strong>Priority:</strong> {rowData.priority?.priorityText}</p>
+                                <p><strong>Source:</strong> {rowData?.sources?.leadSourcesText}</p>
                             </div>
                             <div className="lead-card-actions">
                                 <button onClick={() => handleEdit(rowData)} className="action-button edit">Edit</button>

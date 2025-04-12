@@ -16,12 +16,13 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchEmployee, fetchTags } from '../Features/LeadSlice';
 
 export default function DynamicTable({ lead, tableTitle }) {
+    
     const APi_Url = import.meta.env.VITE_API_URL;
     const [showModal, setShowModal] = useState(false);
     const dispatch = useDispatch();
     const tagData = useSelector((state) => state.leads.tag);
     const employeeData = useSelector((state) => state.leads.Employee || []).filter((item) => item?.blocked === false);
-    const [loading, setLoading] = useState(true); // Add loading state
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         dispatch(fetchTags());
@@ -31,10 +32,8 @@ export default function DynamicTable({ lead, tableTitle }) {
         dispatch(fetchEmployee());
     }, [dispatch]);
 
-    // Add effect to handle loading state based on leads data
     useEffect(() => {
         if (lead) {
-            // Set a small delay to show the loader (optional)
             const timer = setTimeout(() => {
                 setLoading(false);
             }, 500);
@@ -68,8 +67,11 @@ export default function DynamicTable({ lead, tableTitle }) {
     const [rangeEnd, setRangeEnd] = useState();
     const navigate = useNavigate();
 
-    // Tags options with tag name
-    const tagsOptions = tagData.map((tag) => ({ name: tag.tagName, value: tag.tagName }));
+    // Transform tag data into options for MultiSelect
+    const tagsOptions = tagData.map((tag) => ({ 
+        label: tag.tagName, // Use label for display
+        value: tag.tagName  // Use value for selection
+    }));
 
     const onGlobalFilterChange = (e) => {
         const value = e.target.value;
@@ -87,36 +89,55 @@ export default function DynamicTable({ lead, tableTitle }) {
     };
 
     // Filter leads based on selected tags and global filter
-    const getFilteredLeads = () => {
-        // First filter by global search if it exists
-        let filteredByGlobal = lead;
-        if (filters.global.value) {
-            const searchValue = filters.global.value.toLowerCase();
-            filteredByGlobal = lead.filter(item => {
-                return (
-                    (item.name && item.name.toLowerCase().includes(searchValue)) ||
-                    (item.phone && item.phone.toLowerCase().includes(searchValue)) ||
-                    (item.priority && item.priority.toLowerCase().includes(searchValue)) ||
-                    (item.sources && item.sources.toLowerCase().includes(searchValue)) ||
-                    (item.leadAssignedTo?.empName && item.leadAssignedTo.empName.toLowerCase().includes(searchValue)) ||
-                    (item.tags && item.tags.some(tag => tag.toLowerCase().includes(searchValue)))
-                );
-            });
-        }
+   // Replace your existing getFilteredLeads function with this:
+const getFilteredLeads = () => {
+    // First filter by global search if it exists
+    let filteredByGlobal = lead;
+    if (filters.global.value) {
+        const searchValue = filters.global.value?.toLowerCase();
+        filteredByGlobal = lead.filter(item => {
+            return (
+                (item.name && item.name.toLowerCase().includes(searchValue)) ||
+                (item.phone && item.phone.toLowerCase().includes(searchValue)) ||
+                (item.leadAssignedTo?.empName && item.leadAssignedTo.empName.toLowerCase().includes(searchValue)) ||
+                (item.priority?.priorityText && item.priority.priorityText.toLowerCase().includes(searchValue)) ||
+                (item.sources?.leadSourcesText && item.sources.leadSourcesText.toLowerCase().includes(searchValue)) ||
+                (item.tags && item.tags.some(tag => {
+                    // Handle both string tags and object tags
+                    if (typeof tag === 'string') {
+                        return tag.toLowerCase().includes(searchValue);
+                    } else if (typeof tag === 'object' && tag !== null) {
+                        return tag.tagName?.toLowerCase().includes(searchValue);
+                    }
+                    return false;
+                }))
+            );
+        });
+    }
 
-        // Then filter by selected tags if any
-        if (selectedTagValues.length > 0) {
-            return filteredByGlobal.filter(item => {
-                if (!item.tags || !Array.isArray(item.tags)) return false;
-                // Check if every selected tag is present in the item's tags
-                return selectedTagValues.every(selectedTag =>
-                    item.tags.includes(selectedTag)
-                );
+    // Then filter by selected tags if any
+    if (selectedTagValues.length > 0) {
+        return filteredByGlobal.filter(item => {
+            // Check if item has tags and it's an array
+            if (!item.tags || !Array.isArray(item.tags)) return false;
+            
+            // Check if ALL selected tags match the item's tags (instead of ANY)
+            return selectedTagValues.every(selectedTag => {
+                return item.tags.some(tag => {
+                    // Handle both string tags and object tags
+                    if (typeof tag === 'string') {
+                        return tag.toLowerCase() === selectedTag.toLowerCase();
+                    } else if (typeof tag === 'object' && tag !== null) {
+                        return tag.tagName?.toLowerCase() === selectedTag.toLowerCase();
+                    }
+                    return false;
+                });
             });
-        }
+        });
+    }
 
-        return filteredByGlobal;
-    };
+    return filteredByGlobal;
+};
 
     // Get filtered data
     const filteredLeads = getFilteredLeads();
@@ -180,12 +201,35 @@ export default function DynamicTable({ lead, tableTitle }) {
         });
     };
 
+    // // Render the tags for each row in a chips format
+    // const renderTags = (rowData) => {
+    //     if (!rowData.tags || !Array.isArray(rowData.tags) || rowData.tags.length === 0) {
+    //         return <span className="text-muted">No tags</span>;
+    //     }
+    
+    //     return (
+    //         <div className="tag-container">
+    //             {rowData.tags.map((tag, index) => {
+    //                 // Extract tag text from either string or object
+    //                 const tagText = typeof tag === 'string' 
+    //                     ? tag 
+    //                     : (tag && typeof tag === 'object' ? tag.tagName : 'Unknown');
+                    
+    //                 return (
+    //                     <span key={index} className="tag-chip">
+    //                         {tagText}
+    //                     </span>
+    //                 );
+    //             })}
+    //         </div>
+    //     );
+    // };
     const renderHeader = () => {
         return (
             <div className="flex justify-content-between gap-3 align-items-center p-2">
                 <div className="flex align-items-center">
-                    <h5>{tableTitle}</h5>
-                    <div style={{ marginLeft: '15px' }}>
+                    {/* <h5>{tableTitle}</h5> */}
+                    <div style={{ marginLeft: '0' }}>
                         <input
                             type="checkbox"
                             checked={selectAll}
@@ -219,14 +263,16 @@ export default function DynamicTable({ lead, tableTitle }) {
                     />
                     <MultiSelect
                         value={selectedTagValues}
-                        options={tagsOptions.map(tag => tag.value)} // Just use the values
+                        options={tagsOptions}
+                        optionLabel="label"
                         onChange={(e) => {
                             setSelectedTagValues(e.value);
                             setSelectAll(false); // Reset selectAll when tag filter changes
                         }}
                         filter
                         placeholder="Filter by Tags"
-                        style={{ width: "100%", maxWidth: "150px", marginRight: "10px" }}
+                        style={{ width: "90%", maxWidth: "150px", marginRight: "10px" }}
+                        display="chip"
                     />
                     <button onClick={handleShow} className='assignLeadBtn'>
                         Assign Leads {selectedRows.length > 0 ? `(${selectedRows.length})` : ''}
@@ -261,14 +307,6 @@ export default function DynamicTable({ lead, tableTitle }) {
     };
 
     const handleClose = () => setShowModal(false);
-
-    const openModal = (isEdit) => {
-        setEditMode(isEdit);
-        setTitle(isEdit ? "Update Lead" : "Add New Lead");
-        setButtonTitle(isEdit ? "Update Lead" : "Add Lead");
-        setIsModalOpen(true);
-    };
-
     const closeModal = () => {
         setIsModalOpen(false);
     };
@@ -401,9 +439,27 @@ export default function DynamicTable({ lead, tableTitle }) {
                     />
                     <Column field="name" header="NAME" sortable style={{ width: '15%' }} />
                     <Column field="phone" header="PHONE" sortable style={{ width: '15%' }} />
-                    <Column field="priority" header="PRIORITY" sortable style={{ width: '10%', textAlign: "center" }} />
-                    <Column field="sources" header="Sources" sortable style={{ width: '15%' }} />
                     <Column
+                        header="PRIORITY"
+                        body={(rowData) => {
+                            if (!rowData.priority) return "NA";
+                            return rowData?.priority?.priorityText || "NA";
+                        }}
+                        sortable
+                        style={{ width: '10%', textAlign: "center" }}
+                    />
+
+                    <Column
+                        header="Sources"
+                        body={(rowData) => {
+                            if (!rowData.sources) return "NA";
+                            return rowData?.sources?.leadSourcesText || "NA";
+                        }}
+                        sortable
+                        style={{ width: '10%' }}
+                    />
+                   
+                    {/* <Column
                         header="Assigned TO"
                         body={(rowData) => {
                             // If there's no leadAssignedTo or it's not an array
@@ -427,8 +483,8 @@ export default function DynamicTable({ lead, tableTitle }) {
                             // If it's a single employee object (current implementation)
                             return rowData.leadAssignedTo.empName || "NA";
                         }}
-                        style={{ width: '20%' }}
-                    />
+                        style={{ width: '15%' }}
+                    /> */}
                     <Column header="ACTION" body={actionBodyTemplate} style={{ width: '15%' }} />
                 </DataTable>
             )}

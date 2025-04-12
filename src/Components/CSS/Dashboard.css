@@ -365,7 +365,7 @@ body {
     padding: 0px;
   }
   .logout-div{
-    bottom: -60px;
+    bottom: -80px;
   }
   .newDiv{
     left: revert-layer;
@@ -377,7 +377,7 @@ body {
 
 @media(max-width:480px){
   .logout-div{
-    bottom: -50px;
+    bottom: -90px;
   }
   .newDiv{
     left: revert-layer;

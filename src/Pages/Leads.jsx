@@ -31,6 +31,7 @@ function Leads() {
   
   // Custom MultiSelect states
   const [selectedTags, setSelectedTags] = useState([]);
+  const [selectedTagId, setSelectedTagId] = useState([]);
   const [tagSearchQuery, setTagSearchQuery] = useState('');
   const [filteredTags, setFilteredTags] = useState([]);
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
@@ -57,7 +58,7 @@ function Leads() {
       setSourcesOptions(
         sourcesData.map((sources) => ({
           label: sources.leadSourcesText,
-          value: sources.leadSourcesText
+          value: sources._id
         }))
       );
     }
@@ -79,7 +80,7 @@ function Leads() {
       setPriorityOptions(
         priorityData.map((priority) => ({
           label: priority.priorityText,
-          value: priority.priorityText
+          value: priority._id
         }))
       );
     }
@@ -122,6 +123,7 @@ function Leads() {
   const APi_Url = import.meta.env.VITE_API_URL;
 
   const leads = useSelector((state) => state.leads.leads);
+  
   const filteredLead = leads.filter((lead) => lead.deleted === false);
   const deteledLead = leads.filter((lead) => lead.deleted === true);
 
@@ -190,7 +192,7 @@ function Leads() {
       lead.priority = selectedPriority;
       lead.sources = selectedSource;
       lead.leadAssignedTo = selectedEmployee;
-      lead.tags = selectedTags;
+      lead.tags = selectedTagId;
     });
 
     try {
@@ -263,13 +265,21 @@ function Leads() {
     setTagSearchQuery(e.target.value);
   };
 
-  const toggleTagSelection = (tagName) => {
-    if (selectedTags.includes(tagName)) {
-      setSelectedTags(selectedTags.filter(tag => tag !== tagName));
+  const toggleTagSelection = (myTag) => {
+    console.log('====================================')
+    console.log("My Tags" ,myTag)
+
+
+    console.log('====================================')
+    if (selectedTags.includes(myTag._id)) {
+      setSelectedTags(selectedTags.filter(tag => tag !== myTag.tagName));
+      setSelectedTagId(selectedTags.filter(tag => tag !== myTag._id));
     } else {
-      setSelectedTags([...selectedTags, tagName]);
+      setSelectedTags([...selectedTags, myTag.tagName]);
+      setSelectedTagId([...selectedTagId,myTag._id])
     }
   };
+
 
   const removeTag = (tagToRemove, event) => {
     if (event) {
@@ -395,7 +405,8 @@ function Leads() {
                 value={selectedSource}
                 options={sourcesOptions}
                 onChange={handleSourceChange}
-                optionLabel="value"
+                optionLabel="label"
+                 optionValue="value"
                 placeholder="Select source"
                 className="p-dropdown p-component"
                 required
@@ -547,7 +558,7 @@ function Leads() {
                       {filteredTags.map((tag) => (
                         <div
                           key={tag._id}
-                          onClick={() => toggleTagSelection(tag.tagName)}
+                          onClick={() => toggleTagSelection(tag)}
                           style={{
                             padding: '0.5rem 1rem',
                             cursor: 'pointer',
