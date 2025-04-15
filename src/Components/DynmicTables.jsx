@@ -459,7 +459,7 @@ const getFilteredLeads = () => {
                         style={{ width: '10%' }}
                     />
                    
-                    {/* <Column
+                    <Column
                         header="Assigned TO"
                         body={(rowData) => {
                             // If there's no leadAssignedTo or it's not an array
@@ -484,7 +484,7 @@ const getFilteredLeads = () => {
                             return rowData.leadAssignedTo.empName || "NA";
                         }}
                         style={{ width: '15%' }}
-                    /> */}
+                    />
                     <Column header="ACTION" body={actionBodyTemplate} style={{ width: '15%' }} />
                 </DataTable>
             )}

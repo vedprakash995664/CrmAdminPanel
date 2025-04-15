@@ -39,7 +39,7 @@ function MainDashboard() {
                 </div>
                 <div className="card-content">
                   <h4>Total Leads</h4>
-                  <h1>{totalLeads.length}</h1>
+                  <h1>{(totalLeads.length > 0) ? totalLeads.length : <div className="circle-loader"></div>}</h1>
                 </div>
               </div>
  
@@ -49,7 +49,7 @@ function MainDashboard() {
                 </div>
                 <div className="card-content">
                   <h4>Unassigned Leads</h4>
-                  <h1>{filteredLead.length}</h1>
+                  <h1>{(totalLeads.length > 0) ? filteredLead.length : <div className="circle-loader"></div>}</h1>
                 </div>
               </div>
 
@@ -59,7 +59,7 @@ function MainDashboard() {
                 </div>
                 <div className="card-content">
                   <h4>Assigned Leads</h4>
-                  <h1>{assignedLead.length}</h1>
+                  <h1>{(totalLeads.length > 0) ? assignedLead.length : <div className="circle-loader"></div>}</h1>
                 </div>
               </div>
              
@@ -72,7 +72,7 @@ function MainDashboard() {
                 </div>
                 <div className="card-content">
                   <h4>Closed Leads</h4>
-                  <h1>{closedLeads.length}</h1>
+                  <h1>{(totalLeads.length > 0) ? closedLeads.length : <div className="circle-loader"></div>}</h1>
                 </div>
               </div>
             </div>
