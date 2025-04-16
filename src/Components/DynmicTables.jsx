@@ -228,7 +228,6 @@ const getFilteredLeads = () => {
         return (
             <div className="flex justify-content-between gap-3 align-items-center p-2">
                 <div className="flex align-items-center">
-                    {/* <h5>{tableTitle}</h5> */}
                     <div style={{ marginLeft: '0' }}>
                         <input
                             type="checkbox"
