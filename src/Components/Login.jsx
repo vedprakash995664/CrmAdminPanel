@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from 'react-router-dom';
-import { toast, ToastContainer } from 'react-toastify'; // Import Toastify
-import 'react-toastify/dist/ReactToastify.css'; // Import Toastify CSS
-import axios from 'axios'; // Import axios
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import axios from 'axios'; 
 import "./CSS/Login.css";
 
 const Login = () => {
@@ -11,7 +11,7 @@ const Login = () => {
   const [error, setError] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [focusedField, setFocusedField] = useState("");
-  const [loading, setLoading] = useState(false); // New loading state
+  const [loading, setLoading] = useState(false); 
   const navigate = useNavigate();
   const APi_Url = import.meta.env.VITE_API_URL;
 
@@ -19,11 +19,11 @@ const Login = () => {
     e.preventDefault();
     if (!email || !password) {
       setError("All fields are required.");
-      toast.error("All fields are required."); // Toast for error
+      toast.error("All fields are required."); 
     } else {
       try {
-        setLoading(true); // Start loading state
-        // Call your API endpoint using axios
+        setLoading(true);
+        
         const response = await axios.post(`${APi_Url}/digicoder/crm/api/v1/admin/login`, {
           email: email,
           password: password
@@ -38,12 +38,11 @@ const Login = () => {
           sessionStorage.setItem("Name",JSON.stringify(name))
           sessionStorage.setItem("Token", token);
           sessionStorage.setItem("AdminId", adminId);
-          setTimeout(() => {
             setEmail("");
             setPassword("");
             setLoading(false); 
             navigate('/dashboard');
-          }, 500); 
+          
         }
       } catch (error) {
         setLoading(false); // Stop loading state if there's an error

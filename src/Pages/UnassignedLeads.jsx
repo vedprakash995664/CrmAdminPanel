@@ -9,7 +9,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchLeads } from '../Features/LeadSlice';
 
 function UnassignedLeads() {
-
+const [lead,setLead]=useState([])
   const [leadData, setLeadData] = useState([]);
   const [tableTitle, setTableTitle] = useState('Unassigned Leads');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -17,10 +17,21 @@ function UnassignedLeads() {
   const [buttonTitle, setButtonTitle] = useState('');
   const navigate = useNavigate();
 
-
+const APi_Url = import.meta.env.VITE_API_URL;
+  const AdminId = sessionStorage.getItem('AdminId');
+    const fetchLead=async()=>{
+      const response = await axios.get(`${APi_Url}/digicoder/crm/api/v1/lead/getUnassignedLeads/${AdminId}`);
+      setLead(response.data.leads) 
+      console.log(response.data.leads);
+      
+    }
+    useEffect(()=>{
+      fetchLead();
+    },[])
+  
   const dispatch = useDispatch();
-  const leads = useSelector((state) => state.leads.leads);
-  const filteredLead=leads.filter((lead)=>lead.deleted===false && lead.leadAssignedTo === null)
+  // const leads = useSelector((state) => state.leads.leads);
+  const filteredLead=lead
   // Close modal
   const closeModal = () => {
     setIsModalOpen(false);

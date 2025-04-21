@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FilterMatchMode } from 'primereact/api';
 import { InputText } from 'primereact/inputtext';
 import Modal from './LeadForm';
@@ -11,21 +11,20 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchEmployee } from '../Features/LeadSlice';
 import Swal from 'sweetalert2';
 import axios from 'axios';
-import { MultiSelect } from 'primereact/multiselect';
 
 export default function DynamicCard({ lead, tableTitle }) {
-    const APi_Url = import.meta.env.VITE_API_URL
+    const APi_Url=import.meta.env.VITE_API_URL
     const [showModal, setShowModal] = useState(false);
     const [employees, setEmployee] = useState([]);
     const toast = useRef(null);
     const navigate = useNavigate();
     const dispatch = useDispatch();
-    const employeeData = useSelector((state) => state.leads.Employee || []).filter((item) => item?.blocked === false);
+    const employeeData = useSelector((state) => state.leads.Employee|| []).filter((item)=>item?.blocked===false);
     // Fetching employees
-    useEffect(() => {
-        dispatch(fetchEmployee());
-    }, [dispatch]);
-
+    useEffect(() => {  
+               dispatch(fetchEmployee());
+           }, [dispatch]);
+   
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [title, setTitle] = useState('');
@@ -39,23 +38,9 @@ export default function DynamicCard({ lead, tableTitle }) {
         priority: { value: null, matchMode: FilterMatchMode.EQUALS },
         source: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
     });
-    const [searchQuery, setSearchQuery] = useState('');
-    const [currentPage, setCurrentPage] = useState(1);
-    const [tagSearchQuery, setTagSearchQuery] = useState('');
+
     const [globalFilterValue, setGlobalFilterValue] = useState('');
     const [selectedRows, setSelectedRows] = useState([]);
-    const [selectAll, setSelectAll] = useState(false);
-    const [selectedTagValues, setSelectedTagValues] = useState([]);
-    // Prepare tag options for MultiSelect
-    const tagData = useSelector((state) => state.leads.tag || []);
-
-    const tagsOptions = useMemo(() => {
-        return tagData
-            .filter(tag =>
-                tag.tagName.toLowerCase().includes(tagSearchQuery.toLowerCase())
-            )
-            .map(tag => ({ name: tag.tagName, value: tag.tagName }));
-    }, [tagData, tagSearchQuery]);
 
     const handleShow = () => {
         if (selectedRows.length === 0) {
@@ -74,43 +59,23 @@ export default function DynamicCard({ lead, tableTitle }) {
         setFilters(_filters);
         setGlobalFilterValue(value);
     };
+
     const filteredLeads = lead.filter((rowData) => {
-        // Filter by global search if it exists
-        if (filters.global.value) {
-            const searchValue = filters.global.value.toLowerCase();
-            const matchesSearch = (
-                rowData.name?.toLowerCase().includes(searchValue) ||
-                rowData.phone?.toLowerCase().includes(searchValue) ||
-                rowData.priority?.priorityText?.toLowerCase().includes(searchValue) ||
-                rowData.sources?.leadSourcesText?.toLowerCase().includes(searchValue) ||
-                rowData.leadAssignedTo?.empName?.toLowerCase().includes(searchValue) ||
-                (Array.isArray(rowData.tags) && rowData.tags.some(tag =>
-                    String(tag).toLowerCase().includes(searchValue))
-                ))
-
-            if (!matchesSearch) return false;
-        }
-
-        // Filter by selected tags if any
-        if (selectedTagValues.length > 0) {
-            if (!rowData.tags || !Array.isArray(rowData.tags)) return false;
-
-            // Check if ALL selected tags match the item's tags
-            return selectedTagValues.every(selectedTag => {
-                return rowData.tags.some(tag => {
-                    if (typeof tag === 'string') {
-                        return tag.toLowerCase() === selectedTag.toLowerCase();
-                    } else if (typeof tag === 'object' && tag !== null) {
-                        return tag.tagName?.toLowerCase() === selectedTag.toLowerCase();
-                    }
-                    return false;
-                });
-            });
-        }
-
-        return true;
+        const searchValue = filters.global.value?.toLowerCase();
+    
+        if (!searchValue) return true; // No global filter? Return all.
+    
+        return (
+            rowData.name?.toLowerCase().includes(searchValue) ||
+            rowData.phone?.toLowerCase().includes(searchValue) ||
+            rowData.priority?.priorityText?.toLowerCase().includes(searchValue) ||
+            rowData.sources?.leadSourcesText?.toLowerCase().includes(searchValue) ||
+            rowData.leadAssignedTo?.empName?.toLowerCase().includes(searchValue) ||
+            (Array.isArray(rowData.tags) &&
+                rowData.tags.some(tag => String(tag).toLowerCase().includes(searchValue)))
+        );
     });
-
+    
 
     const openModal = (isEdit) => {
         setEditMode(isEdit);
@@ -123,11 +88,11 @@ export default function DynamicCard({ lead, tableTitle }) {
         setIsModalOpen(false);
     };
 
-
+  
     const handleEdit = (rowData) => {
         const viewdata = rowData;
         navigate('fullLeads', { state: { viewdata, tableTitle } });
-
+        
     };
 
 
@@ -145,14 +110,14 @@ export default function DynamicCard({ lead, tableTitle }) {
             if (result.isConfirmed) {
                 try {
                     const response = await axios.put(`${APi_Url}/digicoder/crm/api/v1/lead/delete/${rowData._id}`);
-
+                    
                     if (response.status === 200) {
                         // Filter out the deleted lead from the leadData state
                         const updatedLeads = leadData.filter((item) => item._id !== rowData._id);
                         setLeadData(updatedLeads);
-
+                        
                         // Show success toast notification
-                        toast.current.show({ severity: 'success', summary: 'Success', detail: 'Lead deleted successfully!', life: 3000 });
+                        toast.current.show({severity: 'success',summary: 'Success',detail: 'Lead deleted successfully!',life: 3000});
                         window.location.reload();
                     }
                 } catch (error) {
@@ -178,130 +143,18 @@ export default function DynamicCard({ lead, tableTitle }) {
             setSelectedRows(selectedRows.filter(item => item !== rowData));
         }
     };
-    // const handleSearchChange = (event) => {
-    //     setSearchQuery(event.target.value);
-    //     setCurrentPage(1);
-    //   };
-
-
-    const clearAllFilters = () => {
-        setSelectedTagValues([]);
-        setSearchQuery('');
-        setTagSearchQuery('');
-        setCurrentPage(1);
-    };
-    const handleTagSearchChange = (event) => {
-        setTagSearchQuery(event.target.value);
-    };
-
-    // Handle select all change
-    const handleSelectAllChange = (e) => {
-        const checked = e.target.checked;
-        setSelectAll(checked);
-        setSelectedRows(checked ? [...filteredLeads] : []);
-    };
-    const panelHeaderTemplate = () => {
-        return (
-            <div>
-                <div className="panelHeaderTemplate">
-                    <span className="font-bold">Tag Filters</span>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            clearAllFilters();
-                        }}
-                        className="clear-all-btn"
-                        style={{
-                            backgroundColor: '#f44336',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            padding: '4px 8px',
-                            fontSize: '20px',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        <i className="ri-close-circle-line"></i>
-                    </button>
-                </div>
-                <div className="p-2 flex justify-between items-center">
-                    <input
-                        type="text"
-                        className="w-full p-2 border border-gray-300 rounded"
-                        placeholder="Search tags..."
-                        value={tagSearchQuery}
-                        onChange={handleTagSearchChange}
-                        onClick={(e) => e.stopPropagation()}
-                    />
-                </div>
-            </div>
-        );
-    };
-
 
     const renderHeader = () => {
         return (
-            <div className="filter-container">
-                <div style={{ width: '100%', marginTop: "20px" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "start", gap: "20px", paddingInline: "0px" }}>
-                        <input
-                            type="checkbox"
-                            checked={selectAll}
-                            onChange={handleSelectAllChange}
-                            id="selectAllCheckbox1"
-                        />
-                        <label htmlFor="selectAllCheckbox1" style={{ marginLeft: '5px' }}>Select All</label>
-                    </div>
-                </div>
-                <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px", padding: "0px" }}>
-                    <InputText
-                        value={globalFilterValue}
-                        onChange={onGlobalFilterChange}
-                        placeholder="Keyword Search"
-                        style={{ width: "100%", marginRight: "10px" }}
-                    />
-                    <div className="custom-filter-box">
-                        <MultiSelect
-
-                            value={selectedTagValues}
-                            options={tagsOptions}
-                            optionLabel="name"
-                            onChange={(e) => {
-                                setSelectedTagValues(e.value);
-                                setSelectAll(false);
-                                setCurrentPage(1);
-                            }}
-                            filter
-                            placeholder="Filter by Tags"
-                            className="custom-input custom-multiselect"
-                            panelStyle={{ width: "200px" }}
-                            panelHeaderTemplate={panelHeaderTemplate}
-                            // panelHeaderTemplate={""}
-                            scrollHeight="200px"
-                            display="chip"
-                            itemTemplate={(option) => {
-                                // Custom template for each option in the dropdown
-                                return (
-                                    <div className="custom-option-item">
-                                        <span className="option-label">{option.name}</span>
-                                    </div>
-                                );
-                            }}
-                        />
-                        {selectedTagValues.length > 0 && (
-                            <button className="clear-btn" onClick={clearAllFilters}>
-                                <i className="ri-close-circle-line"></i>
-                            </button>
-                        )}
-                    </div>
-                    <button onClick={handleShow} className='assignLeadBtn' style={{ width: "100%" }}>
-                        Assign Leads {selectedRows.length > 0 ? `(${selectedRows.length})` : ''}
-                    </button>
+            <div className="flex justify-content-between gap-3 align-items-center p-2">
+                <h5>{tableTitle}</h5>
+                <div style={{ display: "flex" }}>
+                    <InputText value={globalFilterValue} onChange={onGlobalFilterChange} placeholder="Keyword Search" style={{ width: "100%", maxWidth: "200px", marginRight: "10px" }} />
+                    <button onClick={handleShow} className='assignLeadBtn'>Assign Leads</button>
                 </div>
             </div>
         );
     };
-
 
     return (
         <div className="card">

@@ -243,7 +243,7 @@ function Employee() {
     const header = renderHeader();
 
     const serialNumberTemplate = (rowData, { rowIndex }) => {
-        return rowIndex + 1 + first;
+        return rowIndex + 1;
     };
 
     return (

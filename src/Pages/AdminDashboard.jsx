@@ -9,7 +9,7 @@ import { fetchLeads } from '../Features/LeadSlice';
 
 function MainDashboard() {
   const [TableTitle, setTableTitle] = useState('Unassigned Leads');
-  const navigate = useNavigate();
+  const navigate = useNavigate(); 
   const dispatch = useDispatch();
   const leads = useSelector((state) => state.leads.leads);
   const filteredLead = leads.filter((lead) => lead.deleted === false && !lead.leadAssignedTo);

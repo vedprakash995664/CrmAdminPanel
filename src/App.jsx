@@ -17,19 +17,12 @@ import FullLeads from './Pages/FullLeads'
 import Profile from './Pages/Profile'
 import EmployeeCardView from './Pages/EmployeeCardView'
 import EmployeesFullPage from './Pages/EmployeesFullPage';
-import { useDispatch } from 'react-redux';
-import { fetchAllLeadData } from './Features/LeadSlice';
-import GlobalLoader from './Features/loadingSlice';
 
 function App() {
-  const dispatch = useDispatch();
-  useEffect(() => {
-    dispatch(fetchAllLeadData());
-  }, [dispatch]);
+
 
   return (
     <>
-    <GlobalLoader />
       <Router>
         <Routes>
           <Route path='/' element={<Login/>}/>
