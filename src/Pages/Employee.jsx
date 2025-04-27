@@ -87,7 +87,6 @@ function Employee() {
     const handleView = (rowData) => {
         const viewData = rowData;
         localStorage.setItem("Employee", JSON.stringify(viewData))
-        console.log(viewData);
         navigate('employeefullpage');
 
     };

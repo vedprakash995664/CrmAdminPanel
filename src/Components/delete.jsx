@@ -7,43 +7,31 @@ import { MultiSelect } from 'primereact/multiselect';
 import Modal from './LeadForm';
 import { useNavigate } from 'react-router-dom';
 import './CSS/DynamicTable.css';
-import { Dropdown } from 'primereact/dropdown';
 import AssignTaskModal from './AssignTaskModal';
 import { Toast } from 'primereact/toast';
 import Swal from 'sweetalert2';
+
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchTags } from '../Features/LeadSlice';
+import { fetchEmployee, fetchTags } from '../Features/LeadSlice';
 
-export default function DynamicTable({ lead,
-    tableTitle,
-    onPageChange,
-    first,
-    rows,
-    totalRecords,
-    onEmployeeFilter,
-    onTagsChange  
- }) {
-
+export default function DynamicTable({ lead, tableTitle }) {
+    
     const APi_Url = import.meta.env.VITE_API_URL;
     const [showModal, setShowModal] = useState(false);
     const dispatch = useDispatch();
     const tagData = useSelector((state) => state.leads.tag);
     const employeeData = useSelector((state) => state.leads.Employee || []).filter((item) => item?.blocked === false);
     const [loading, setLoading] = useState(true);
-    const [unassignModalOpen, setUnassignModalOpen] = useState(false);
-    const [assignedEmployees, setAssignedEmployees] = useState([]);
-    const [selectedEmployeesToRemove, setSelectedEmployeesToRemove] = useState([]);
-    const [selectedEmployeeFilter, setSelectedEmployeeFilter] = useState(null);
-    
+    const [unassignModal, setUnassignModal] = useState(false);
+
     useEffect(() => {
         dispatch(fetchTags());
     }, [dispatch]);
-    
-    const employeeOptions = employeeData.map(emp => ({
-        label: emp.empName,
-        value: emp._id
-    }));
+
+    useEffect(() => {
+        dispatch(fetchEmployee());
+    }, [dispatch]);
 
     useEffect(() => {
         if (lead) {
@@ -72,16 +60,24 @@ export default function DynamicTable({ lead,
     };
 
     const [filters, setFilters] = useState(getInitialFilters());
-
-    const [globalFilterValue, setGlobalFilterValue] = useState(localStorage.getItem('leadGlobalFilterValue') || '');
-
+    
+    // Initialize globalFilterValue from localStorage or empty string
+    const getInitialGlobalFilterValue = () => {
+        return localStorage.getItem('leadGlobalFilterValue') || '';
+    };
+    
+    const [globalFilterValue, setGlobalFilterValue] = useState(getInitialGlobalFilterValue());
+    
+    // Initialize selectedTagValues from localStorage or empty array
     const getInitialSelectedTagValues = () => {
         const savedTags = localStorage.getItem('leadSelectedTags');
         return savedTags ? JSON.parse(savedTags) : [];
     };
-
+    
     const [selectedTagValues, setSelectedTagValues] = useState(getInitialSelectedTagValues());
 
+    const [first, setFirst] = useState(0);
+    const [rows, setRows] = useState(5);
     const [selectedRows, setSelectedRows] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [title, setTitle] = useState('');
@@ -94,21 +90,25 @@ export default function DynamicTable({ lead,
     const [rangeEnd, setRangeEnd] = useState();
     const navigate = useNavigate();
 
+    // Save filters to localStorage whenever they change
     useEffect(() => {
         localStorage.setItem('leadTableFilters', JSON.stringify(filters));
     }, [filters]);
 
+    // Save globalFilterValue to localStorage
     useEffect(() => {
         localStorage.setItem('leadGlobalFilterValue', globalFilterValue);
     }, [globalFilterValue]);
 
+    // Save selectedTagValues to localStorage
     useEffect(() => {
         localStorage.setItem('leadSelectedTags', JSON.stringify(selectedTagValues));
     }, [selectedTagValues]);
 
-    const tagsOptions = tagData.map((tag) => ({
-        label: tag.tagName,
-        value: tag.tagName
+    // Transform tag data into options for MultiSelect
+    const tagsOptions = tagData.map((tag) => ({ 
+        label: tag.tagName, // Use label for display
+        value: tag.tagName  // Use value for selection
     }));
 
     const onGlobalFilterChange = (e) => {
@@ -117,30 +117,16 @@ export default function DynamicTable({ lead,
         _filters['global'].value = value;
         setFilters(_filters);
         setGlobalFilterValue(value);
+        // Reset selectAll when filter changes
         setSelectAll(false);
     };
-    
-    useEffect(() => {
-        if (onTagsChange) {
-          const tagIds = selectedTagValues.map(tag => {
-            // Find the corresponding tag object from tagData to get its ID
-            if (typeof tag === 'string') {
-              // If tag is a string (tagName), find the corresponding tag object to get its ID
-              const tagObject = tagData.find(t => t.tagName === tag);
-              return tagObject ? tagObject._id : tag;
-            } else if (tag.value) {
-              // If tag is an object with a value property (from MultiSelect)
-              const tagObject = tagData.find(t => t.tagName === tag.value);
-              return tagObject ? tagObject._id : tag.value;
-            } else {
-              // If tag is already an object with _id
-              return tag._id || tag;
-            }
-          });
-          onTagsChange(tagIds);
-        }
-    }, [selectedTagValues, tagData]);
 
+    const onPageChange = (event) => {
+        setFirst(event.first);
+        setRows(event.rows);
+    };
+
+    // Clear all filters function
     const clearAllFilters = () => {
         setGlobalFilterValue('');
         setSelectedTagValues([]);
@@ -151,14 +137,16 @@ export default function DynamicTable({ lead,
             priority: { value: null, matchMode: FilterMatchMode.EQUALS },
             sources: { value: null, matchMode: FilterMatchMode.STARTS_WITH }
         });
-
+        
+        // Clear localStorage items
         localStorage.removeItem('leadTableFilters');
         localStorage.removeItem('leadGlobalFilterValue');
         localStorage.removeItem('leadSelectedTags');
-
+        
+        // Reset selection
         setSelectAll(false);
         setSelectedRows([]);
-
+        
         toast.current.show({
             severity: 'info',
             summary: 'Filters Cleared',
@@ -167,94 +155,64 @@ export default function DynamicTable({ lead,
         });
     };
 
+    // Handle unassigning selected leads
     const handleUnassignLeads = () => {
         if (selectedRows.length === 0) {
-            toast.current.show({
-                severity: 'warn',
-                summary: 'Warning',
-                detail: 'Please select at least one lead before unassigning.',
-                life: 3000
+            toast.current.show({ 
+                severity: 'warn', 
+                summary: 'Warning', 
+                detail: 'Please select at least one lead before unassigning.', 
+                life: 3000 
             });
-            return;
+        } else {
+            // Show confirmation before unassigning
+            setUnassignModal(true);
         }
-
-        const employeesMap = new Map();
-
-        selectedRows.forEach(lead => {
-            if (lead.leadAssignedTo && Array.isArray(lead.leadAssignedTo)) {
-                lead.leadAssignedTo.forEach(emp => {
-                    if (emp._id && !employeesMap.has(emp._id)) {
-                        employeesMap.set(emp._id, emp);
-                    }
-                });
-            }
-        });
-
-        const uniqueEmployees = Array.from(employeesMap.values());
-
-        if (uniqueEmployees.length === 0) {
-            toast.current.show({
-                severity: 'info',
-                summary: 'No Assignments',
-                detail: 'Selected leads have no assigned employees.',
-                life: 3000
-            });
-            return;
-        }
-
-        setAssignedEmployees(uniqueEmployees);
-        setSelectedEmployeesToRemove([]);
-        setUnassignModalOpen(true);
     };
 
-    const confirmUnassignSelected = async () => {
-        const leadIds = selectedRows.map(lead => lead._id);
-        const employeeIdsToRemove = selectedEmployeesToRemove;
-        
+    // Perform the unassign operation
+    const confirmUnassignLeads = async () => {
         try {
+            // Get the IDs of the selected leads
+            const leadIds = selectedRows.map(lead => lead._id);
+            
+            // Call API to unassign these leads
             const response = await axios.put(`${APi_Url}/digicoder/crm/api/v1/lead/unassign`, {
-                leadIds,
-                employeeIdsToRemove
+                leadIds: leadIds
             });
+            
             if (response.status === 200) {
                 toast.current.show({
                     severity: 'success',
                     summary: 'Success',
-                    detail: `Removed ${selectedEmployeesToRemove.length} employees from ${selectedRows.length} leads`,
+                    detail: `Successfully unassigned ${selectedRows.length} leads`,
                     life: 3000
                 });
-
+                
+                // Reset selection
                 setSelectedRows([]);
                 setSelectAll(false);
-                setUnassignModalOpen(false);
-
+                
+                // Refresh the lead data
                 window.location.reload();
             }
         } catch (error) {
-            console.error("Error unassigning employees:", error);
+            console.error("Error unassigning leads:", error);
             toast.current.show({
                 severity: 'error',
                 summary: 'Error',
-                detail: 'Failed to remove employees. Please try again.',
+                detail: 'Failed to unassign leads. Please try again.',
                 life: 3000
             });
+        } finally {
+            setUnassignModal(false);
         }
     };
 
+    // Filter leads based on selected tags, global filter
     const getFilteredLeads = () => {
+        // First filter by global search if it exists
         let filteredByGlobal = lead;
-        if (selectedEmployeeFilter) {
-            filteredByGlobal = filteredByGlobal.filter(item => {
-                if (!item.leadAssignedTo) return false;
-
-                if (Array.isArray(item.leadAssignedTo)) {
-                    return item.leadAssignedTo.some(emp => emp._id === selectedEmployeeFilter);
-                }
-
-                return item.leadAssignedTo._id === selectedEmployeeFilter;
-            });
-        }
-
         if (filters.global.value) {
             const searchValue = filters.global.value?.toLowerCase();
             filteredByGlobal = lead.filter(item => {
@@ -265,6 +223,7 @@ export default function DynamicTable({ lead,
                     (item.priority?.priorityText && item.priority.priorityText.toLowerCase().includes(searchValue)) ||
                     (item.sources?.leadSourcesText && item.sources.leadSourcesText.toLowerCase().includes(searchValue)) ||
                     (item.tags && item.tags.some(tag => {
+                        // Handle both string tags and object tags
                         if (typeof tag === 'string') {
                             return tag.toLowerCase().includes(searchValue);
                         } else if (typeof tag === 'object' && tag !== null) {
@@ -276,13 +235,17 @@ export default function DynamicTable({ lead,
             });
         }
 
+        // Then filter by selected tags if any
         let filteredByTags = filteredByGlobal;
         if (selectedTagValues.length > 0) {
             filteredByTags = filteredByGlobal.filter(item => {
+                // Check if item has tags and it's an array
                 if (!item.tags || !Array.isArray(item.tags)) return false;
-
+                
+                // Check if ALL selected tags match the item's tags (instead of ANY)
                 return selectedTagValues.every(selectedTag => {
                     return item.tags.some(tag => {
+                        // Handle both string tags and object tags
                         if (typeof tag === 'string') {
                             return tag.toLowerCase() === selectedTag.toLowerCase();
                         } else if (typeof tag === 'object' && tag !== null) {
@@ -297,29 +260,36 @@ export default function DynamicTable({ lead,
         return filteredByTags;
     };
 
+    // Get filtered data
     const filteredLeads = getFilteredLeads();
 
+    // Update selected rows when select all changes or filtered leads change
     useEffect(() => {
         if (selectAll) {
             setSelectedRows([...filteredLeads]);
         } else {
+            // If user unchecks "select all", clear all selections
             setSelectedRows([]);
         }
     }, [selectAll, filters.global.value, selectedTagValues]);
 
+    // Handle the "Select All" checkbox change
     const handleSelectAllChange = (e) => {
         const checked = e.target.checked;
         setSelectAll(checked);
     };
 
+    // Open range selection modal
     const openRangeModal = () => {
         setRangeModalOpen(true);
     };
 
+    // Close range selection modal
     const closeRangeModal = () => {
         setRangeModalOpen(false);
     };
 
+    // Handle range selection
     const handleRangeSelection = () => {
         if (rangeStart < 1 || rangeEnd > filteredLeads.length || rangeStart > rangeEnd) {
             toast.current.show({
@@ -330,9 +300,12 @@ export default function DynamicTable({ lead,
             });
             return;
         }
+
+        // Clear previous selections
         setSelectedRows([]);
         setSelectAll(false);
 
+        // Select leads in the specified range (note: array is 0-indexed but user input is 1-indexed)
         const newSelectedRows = [];
         for (let i = rangeStart - 1; i < rangeEnd && i < filteredLeads.length; i++) {
             newSelectedRows.push(filteredLeads[i]);
@@ -348,39 +321,35 @@ export default function DynamicTable({ lead,
             life: 3000
         });
     };
-    
-    // New handler for row click selection
-    const handleRowClick = (e) => {
-        const rowData = e.data;
-        const isSelected = selectedRows.some(row => row._id === rowData._id);
-        
-        if (isSelected) {
-            // If row is already selected, deselect it
-            setSelectedRows(selectedRows.filter(row => row._id !== rowData._id));
-            if (selectAll) {
-                setSelectAll(false);
-            }
-        } else {
-            // If row is not selected, select it
-            setSelectedRows([...selectedRows, rowData]);
-        }
-    };
 
     const renderHeader = () => {
         return (
             <div className="flex justify-content-between gap-3 align-items-center p-2">
                 <div className="flex align-items-center">
-                    <Dropdown
-                        value={selectedEmployeeFilter}
-                        options={employeeOptions}
-                        onChange={(e) => {
-                            setSelectedEmployeeFilter(e.value);
-                            onEmployeeFilter(e.value);
-                        }}
-                        optionLabel="label"
-                        placeholder="Filter by Employee"
-                        showClear
-                    />
+                    <div style={{ marginLeft: '0' }}>
+                        <input
+                            type="checkbox"
+                            checked={selectAll}
+                            onChange={handleSelectAllChange}
+                            id="selectAllCheckbox"
+                        />
+                        <label htmlFor="selectAllCheckbox" style={{ marginLeft: '5px' }}>Select All</label>
+
+                        <button
+                            onClick={openRangeModal}
+                            style={{
+                                marginLeft: '15px',
+                                backgroundColor: '#EDF1FF',
+                                color: '#3454D1',
+                                border: 'none',
+                                borderRadius: '4px',
+                                padding: '4px 8px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Select Range
+                        </button>
+                    </div>
                 </div>
                 <div className="flex align-items-center">
                     <InputText
@@ -395,11 +364,11 @@ export default function DynamicTable({ lead,
                         optionLabel="label"
                         onChange={(e) => {
                             setSelectedTagValues(e.value);
-                            setSelectAll(false);
+                            setSelectAll(false); // Reset selectAll when tag filter changes
                         }}
                         filter
                         placeholder="Filter by Tags"
-                        style={{ width: "20%", maxWidth: "150px", marginRight: "10px" }}
+                        style={{ width: "90%", maxWidth: "150px", marginRight: "10px" }}
                         display="chip"
                     />
                     <button
@@ -415,18 +384,19 @@ export default function DynamicTable({ lead,
                         }}
                     >
                         <i className="ri-filter-off-line" style={{ marginRight: '5px' }}></i>
+                        
                     </button>
                     <button onClick={handleShow} className='assignLeadBtn' style={{ marginRight: '10px' }}>
                         Assign Leads {selectedRows.length > 0 ? `(${selectedRows.length})` : ''}
                     </button>
-                    <button
-                        onClick={handleUnassignLeads}
+                    <button 
+                        onClick={handleUnassignLeads} 
                         style={{
                             backgroundColor: '#FF5A5F',
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
-                            padding: '12px 10px',
+                            padding: '8px 15px',
                             cursor: 'pointer'
                         }}
                     >
@@ -440,22 +410,13 @@ export default function DynamicTable({ lead,
     const actionBodyTemplate = (rowData) => {
         return (
             <div className="flex justify-content-around gap-3">
-                <button onClick={(e) => {
-                    e.stopPropagation(); // Prevent row selection when clicking action buttons
-                    handleEdit(rowData);
-                }} style={{ borderRadius: "50%", border: "none", height: "40px", width: "40px", backgroundColor: "#EDF1FF", color: "#3454D1" }}>
+                <button onClick={() => handleEdit(rowData)} style={{ borderRadius: "50%", border: "none", height: "40px", width: "40px", backgroundColor: "#EDF1FF", color: "#3454D1" }}>
                     <i className="ri-edit-box-fill"></i>
                 </button>
-                <button onClick={(e) => {
-                    e.stopPropagation(); // Prevent row selection when clicking action buttons
-                    handleDelete(rowData);
-                }} style={{ borderRadius: "50%", border: "none", height: "40px", width: "40px", backgroundColor: "#EDF1FF", color: "red" }}>
+                <button onClick={() => handleDelete(rowData)} style={{ borderRadius: "50%", border: "none", height: "40px", width: "40px", backgroundColor: "#EDF1FF", color: "red" }}>
                     <i className="ri-delete-bin-5-fill"></i>
                 </button>
-                <button onClick={(e) => {
-                    e.stopPropagation(); // Prevent row selection when clicking action buttons
-                    handleView(rowData);
-                }} style={{ borderRadius: "50%", border: "none", height: "40px", width: "40px", backgroundColor: "#EDF1FF", color: "#3454D1", fontWeight: "bold" }}>
+                <button onClick={() => handleView(rowData)} style={{ borderRadius: "50%", border: "none", height: "40px", width: "40px", backgroundColor: "#EDF1FF", color: "#3454D1", fontWeight: "bold" }}>
                     <i className="ri-eye-line"></i>
                 </button>
             </div>
@@ -516,11 +477,14 @@ export default function DynamicTable({ lead,
     const handleCheckboxChange = (e, rowData) => {
         const checked = e.target.checked;
         if (checked) {
+            // Add the row to selected rows if not already there
             if (!selectedRows.some(row => row._id === rowData._id)) {
                 setSelectedRows([...selectedRows, rowData]);
             }
         } else {
+            // Remove the row from selected rows
             setSelectedRows(selectedRows.filter(row => row._id !== rowData._id));
+            // Uncheck select all if it was checked
             if (selectAll) {
                 setSelectAll(false);
             }
@@ -529,11 +493,7 @@ export default function DynamicTable({ lead,
 
     const header = renderHeader();
 
-    // Custom row class to indicate selected rows
-    const rowClassName = (data) => {
-        return selectedRows.some(row => row._id === data._id) ? 'selected-row' : '';
-    };
-
+    // Loading spinner component
     const Loader = () => (
         <div className="loader-container" style={{
             display: 'flex',
@@ -554,16 +514,6 @@ export default function DynamicTable({ lead,
                 @keyframes spin {
                     0% { transform: rotate(0deg); }
                     100% { transform: rotate(360deg); }
-                }
-                
-                /* Add custom style for selected rows */
-                .selected-row {
-                    background-color: #e6f7ff !important;
-                }
-                
-                /* Make the rows clickable with a pointer cursor */
-                .p-datatable .p-datatable-tbody > tr {
-                    cursor: pointer;
                 }
             `}</style>
         </div>
@@ -587,14 +537,9 @@ export default function DynamicTable({ lead,
                     header={header}
                     emptyMessage="No leads found."
                     onPage={onPageChange}
-                    totalRecords={totalRecords}
                     paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink"
                     removableSort
-                    lazy
                     style={{ borderRadius: "10px" }}
-                    rowClassName={rowClassName}
-                    selectionMode="single"
-                    onRowClick={handleRowClick}
                     footer={
                         <div className="p-2">
                             <div className="selection-summary">
@@ -604,34 +549,19 @@ export default function DynamicTable({ lead,
                     }
                 >
                     <Column
-                        header={
-                            <div className="flex align-items-center gap-2">
-                                <input
-                                    type="checkbox"
-                                    checked={selectAll}
-                                    onChange={handleSelectAllChange}
-                                    id="selectAllCheckbox"
-                                />
-                                <label htmlFor="selectAllCheckbox">SR No</label>
-                            </div>
-                        }
+                        header="SR No"
                         body={(rowData, { rowIndex }) => (
                             <div className="flex align-items-center gap-3">
                                 <input
                                     type="checkbox"
                                     checked={selectedRows.some(row => row._id === rowData._id)}
-                                    onChange={(e) => {
-                                        e.stopPropagation(); // Prevent row click when clicking checkbox
-                                        handleCheckboxChange(e, rowData);
-                                    }}
-                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(e) => handleCheckboxChange(e, rowData)}
                                 />
                                 {rowIndex + 1}
                             </div>
                         )}
                         style={{ width: '10%' }}
                     />
-
                     <Column field="name" header="NAME" sortable style={{ width: '15%' }} />
                     <Column field="phone" header="PHONE" sortable style={{ width: '15%' }} />
                     <Column
@@ -653,17 +583,21 @@ export default function DynamicTable({ lead,
                         sortable
                         style={{ width: '10%' }}
                     />
-
+                   
                     <Column
                         header="Assigned TO"
                         body={(rowData) => {
+                            // If there's no leadAssignedTo or it's not an array
                             if (!rowData.leadAssignedTo) return "NA";
 
+                            // If leadAssignedTo is an array of employee objects
                             if (Array.isArray(rowData.leadAssignedTo)) {
+                                // Filter out any undefined or null values
                                 const validNames = rowData.leadAssignedTo
                                     .map(emp => emp.empName)
                                     .filter(name => name);
 
+                                // Show only first two names plus "..." if more exist
                                 if (validNames.length <= 2) {
                                     return validNames.join(", ") || "NA";
                                 } else {
@@ -671,6 +605,7 @@ export default function DynamicTable({ lead,
                                 }
                             }
 
+                            // If it's a single employee object (current implementation)
                             return rowData.leadAssignedTo.empName || "NA";
                         }}
                         style={{ width: '15%' }}
@@ -768,9 +703,9 @@ export default function DynamicTable({ lead,
                 </div>
             )}
 
-            {/* Unassign Employees Modal */}
-            {unassignModalOpen && (
-                <div className="unassign-modal" style={{
+            {/* Unassign Confirmation Modal */}
+            {unassignModal && (
+                <div className="unassign-confirmation-modal" style={{
                     position: 'fixed',
                     top: 0,
                     left: 0,
@@ -786,102 +721,45 @@ export default function DynamicTable({ lead,
                         backgroundColor: 'white',
                         padding: '20px',
                         borderRadius: '8px',
-                        width: '500px',
+                        width: '400px',
                         boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
                     }}>
-                        <h3>Remove Employees from Leads</h3>
-                        <p>Select employees to remove from {selectedRows.length} lead(s):</p>
-
-                        <div style={{
-                            maxHeight: '300px',
-                            overflowY: 'auto',
-                            margin: '15px 0',
-                            border: '1px solid #eee',
-                            borderRadius: '4px'
-                        }}>
-                            {assignedEmployees.map(employee => (
-                                <div key={employee._id} style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    padding: '10px',
-                                    borderBottom: '1px solid #f0f0f0',
-                                    backgroundColor: selectedEmployeesToRemove.includes(employee._id) ? '#f8f9fa' : 'white'
-                                }}>
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedEmployeesToRemove.includes(employee._id)}
-                                        onChange={() => {
-                                            setSelectedEmployeesToRemove(prev =>
-                                                prev.includes(employee._id)
-                                                    ? prev.filter(id => id !== employee._id)
-                                                    : [...prev, employee._id]);
-                                                }}
-                                                style={{
-                                                    marginRight: '10px',
-                                                    cursor: 'pointer'
-                                                }}
-                                            />
-                                            <div>
-                                                <div style={{ fontWeight: '500' }}>{employee.empName}</div>
-                                                <div style={{ fontSize: '0.8rem', color: '#666' }}>
-                                                    {employee.designation || 'No designation specified'}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-        
-                                <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    marginTop: '15px'
-                                }}>
-                                    <div>
-                                        {selectedEmployeesToRemove.length > 0 && (
-                                            <span style={{ color: '#666' }}>
-                                                {selectedEmployeesToRemove.length} employee(s) selected
-                                            </span>
-                                        )}
-                                    </div>
-        
-                                    <div style={{ display: 'flex', gap: '10px' }}>
-                                        <button
-                                            onClick={() => setUnassignModalOpen(false)}
-                                            style={{
-                                                padding: '8px 16px',
-                                                border: '1px solid #ddd',
-                                                borderRadius: '4px',
-                                                backgroundColor: 'white',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            Cancel
-                                        </button>
-        
-                                        {selectedEmployeesToRemove.length > 0 && (
-                                            <button
-                                                onClick={confirmUnassignSelected}
-                                                style={{
-                                                    padding: '8px 16px',
-                                                    border: 'none',
-                                                    borderRadius: '4px',
-                                                    backgroundColor: '#FF5A5F',
-                                                    color: 'white',
-                                                    cursor: 'pointer'
-                                                }}
-                                            >
-                                                Remove Selected
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
+                        <h3>Unassign Leads</h3>
+                        <p>Are you sure you want to unassign {selectedRows.length} selected lead(s)?</p>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
+                            <button
+                                onClick={() => setUnassignModal(false)}
+                                style={{
+                                    padding: '8px 16px',
+                                    border: '1px solid #ddd',
+                                    borderRadius: '4px',
+                                    backgroundColor: '#f5f5f5',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmUnassignLeads}
+                                style={{
+                                    padding: '8px 16px',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    backgroundColor: '#FF5A5F',
+                                    color: 'white',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Unassign
+                            </button>
                         </div>
-                    )}
-        
-                    <Modal isOpen={isModalOpen} onClose={closeModal} title={title} buttonTitle={buttonTitle} leadData={leadData} />
-                    <AssignTaskModal show={showModal} handleClose={handleClose} employees={employeeData} selectedData={selectedRows} />
+                    </div>
                 </div>
-            );
-        }
+            )}
+
+            <Modal isOpen={isModalOpen} onClose={closeModal} title={title} buttonTitle={buttonTitle} leadData={leadData} />
+            <AssignTaskModal show={showModal} handleClose={handleClose} employees={employeeData} selectedData={selectedRows} />
+        </div>
+    );
+}

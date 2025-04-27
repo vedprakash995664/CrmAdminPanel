@@ -12,10 +12,10 @@ function MainDashboard() {
   const navigate = useNavigate(); 
   const dispatch = useDispatch();
   const leads = useSelector((state) => state.leads.leads);
-  const filteredLead = leads.filter((lead) => lead.deleted === false && !lead.leadAssignedTo);
-  const assignedLead = leads.filter((lead) => lead.deleted === false && lead.leadAssignedTo);
-  const totalLeads = leads.filter((lead) => lead.deleted === false);
-  const closedLeads = leads.filter((lead) => lead.deleted === false && lead.closed === true);
+  const filteredLead = leads?.filter((lead) => lead.deleted === false && !lead.leadAssignedTo);
+  const assignedLead = leads?.filter((lead) => lead.deleted === false && lead.leadAssignedTo);
+  const totalLeads = leads?.filter((lead) => lead.deleted === false);
+  const closedLeads = leads?.filter((lead) => lead.deleted === false && lead.closed === true);
 
   useEffect(() => {
     const tokenId = sessionStorage.getItem('Token');
@@ -39,7 +39,7 @@ function MainDashboard() {
                 </div>
                 <div className="card-content">
                   <h4>Total Leads</h4>
-                  <h1>{(totalLeads.length > 0) ? totalLeads.length : <div className="circle-loader"></div>}</h1>
+                  <h1>{(totalLeads?.length > 0) ? totalLeads?.length : <div className="circle-loader"></div>}</h1>
                 </div>
               </div>
  
@@ -49,7 +49,7 @@ function MainDashboard() {
                 </div>
                 <div className="card-content">
                   <h4>Unassigned Leads</h4>
-                  <h1>{(totalLeads.length > 0) ? filteredLead.length : <div className="circle-loader"></div>}</h1>
+                  <h1>{(totalLeads?.length > 0) ? filteredLead?.length : <div className="circle-loader"></div>}</h1>
                 </div>
               </div>
 
@@ -59,7 +59,7 @@ function MainDashboard() {
                 </div>
                 <div className="card-content">
                   <h4>Assigned Leads</h4>
-                  <h1>{(totalLeads.length > 0) ? assignedLead.length : <div className="circle-loader"></div>}</h1>
+                  <h1>{(totalLeads?.length > 0) ? assignedLead?.length : <div className="circle-loader"></div>}</h1>
                 </div>
               </div>
              
@@ -72,7 +72,7 @@ function MainDashboard() {
                 </div>
                 <div className="card-content">
                   <h4>Closed Leads</h4>
-                  <h1>{(totalLeads.length > 0) ? closedLeads.length : <div className="circle-loader"></div>}</h1>
+                  <h1>{(totalLeads?.length > 0) ? closedLeads?.length : <div className="circle-loader"></div>}</h1>
                 </div>
               </div>
             </div>
@@ -83,7 +83,7 @@ function MainDashboard() {
             </div>
             
             <div className='main-card-container'>
-              <DynamicCard lead={filteredLead} />
+              {/* <DynamicCard lead={filteredLead} /> */}
             </div>
           </div>
         </div>

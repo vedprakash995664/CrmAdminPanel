@@ -36,7 +36,7 @@ function FullLeads() {
   const [formData, setFormData] = useState({
     name: viewdata?.name || "",
     email: viewdata?.email || "",
-    Phone: viewdata?.phone || "",
+    Phone: viewdata?.phone || "",  
     gender: viewdata?.gender || "",
     dob: viewdata?.dob || "",
     priority: viewdata?.priority?._id || "",
@@ -125,6 +125,26 @@ function FullLeads() {
       },
     },
   };
+
+  const [followUps, setFollowUps] = useState([]);
+  const [isFollowupsLoading, setIsFollowupsLoading] = useState(true);
+
+  const fetchFollowups = async () => {
+    try {
+      setIsFollowupsLoading(true);
+      const response = await axios.get(`${APi_Url}/digicoder/crm/api/v1/followup/getall/${viewdata._id}`);
+      setFollowUps(response.data.followups);
+    } catch (error) {
+      console.log(error);
+      toast.error('Error fetching followups');
+    } finally {
+      setIsFollowupsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchFollowups();
+  }, []);
 
   const handleTagChange = (event) => {
     const { value } = event.target;
@@ -232,20 +252,29 @@ function FullLeads() {
     });
   };
 
-  const [followUps, setFollowUps] = useState([]);
-
-  const fetchFollowups = async () => {
-    try {
-      const response = await axios.get(`${APi_Url}/digicoder/crm/api/v1/followup/getall/${viewdata._id}`);
-      setFollowUps(response.data.followups);
-    } catch (error) {
-      console.log(error);
-    }
-  }
-
-  useEffect(() => {
-    fetchFollowups();
-  }, []);
+  const FollowupLoader = () => (
+    <div className="followup-loader" style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: '100px'
+    }}>
+      <div className="spinner" style={{
+        border: '4px solid rgba(0, 0, 0, 0.1)',
+        borderRadius: '50%',
+        borderTop: '4px solid #3454D1',
+        width: '40px',
+        height: '40px',
+        animation: 'spin 1s linear infinite'
+      }}></div>
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  );
 
   return (
     <div>
@@ -464,31 +493,44 @@ function FullLeads() {
                 </div>
               </div>
 
-              <div className="follow-ups">
-                {followUps.map((followUp, index) => (
-                  <div key={followUp._id} className="follow-outer">
-                    <div className="follow-body">
-                      <div className="follow-body-header">
-                        <div className="followup-srNo">{index + 1}</div>
-                        <div>
-                          <span className="cratedBy">Created Date-</span>
-                          <span className="cratedBy">{followUp.createdAt.split("T")[0]}</span>
-                          <div style={{ marginTop: "5px" }}>
-                            <span className="cratedBy">Created By-</span>
-                            <span className="cratedBy">{followUp.followedBy.empName}</span>
+              {isFollowupsLoading ? (
+                <FollowupLoader />
+              ) : followUps.length > 0 ? (
+                <div className="follow-ups">
+                  {followUps.map((followUp, index) => (
+                    <div key={followUp._id} className="follow-outer">
+                      <div className="follow-body">
+                        <div className="follow-body-header">
+                          <div className="followup-srNo">{index + 1}</div>
+                          <div>
+                            <span className="cratedBy">Created Date-</span>
+                            <span className="cratedBy">{followUp.createdAt.split("T")[0]}</span>
+                            <div style={{ marginTop: "5px" }}>
+                              <span className="cratedBy">Created By-</span>
+                              <span className="cratedBy">{followUp.followedBy.empName}</span>
+                            </div>
                           </div>
                         </div>
+                        <div className="follow-ups-txt">
+                          <p><b>Message:- </b><span>{followUp.followupMessage}</span></p>
+                          <p><b>Priority:- </b><span>{followUp.priority?.priorityText || "NA"}</span></p>
+                          <p><b>followupStatus:- </b><span>{followUp.followupStatus?.leadStatusText || "NA"}</span></p>
+                        </div>
                       </div>
-                      <div className="follow-ups-txt">
-                        <p><b>Message:- </b><span>{followUp.followupMessage}</span></p>
-                        <p><b>Priority:- </b><span>{followUp.priority?.priorityText || "NA"}</span></p>
-                        <p><b>followupStatus:- </b><span>{followUp.followupStatus?.leadStatusText || "NA"}</span></p>
-                      </div>
+                      <hr />
                     </div>
-                    <hr />
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="no-followups" style={{
+                  textAlign: 'center',
+                  padding: '20px',
+                  color: '#666',
+                  fontStyle: 'italic'
+                }}>
+                  No followups available
+                </div>
+              )}
             </div>
           </div>
         </div>

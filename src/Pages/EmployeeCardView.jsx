@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Dashboard from '../Components/Dashboard';
 import './CSS/EmployeeCardView.css';
-import { DataTable } from 'primereact/datatable';
-import { Column } from 'primereact/column';
+
 import { InputText } from 'primereact/inputtext';
-import { FilterMatchMode } from 'primereact/api';
+
 import { Dialog } from 'primereact/dialog';
 import { Button } from 'primereact/button';
 import { Toast } from 'primereact/toast';
@@ -19,8 +17,6 @@ import Swal from 'sweetalert2'; // Import SweetAlert2
 function EmployeeCardView() {
     const APi_Url=import.meta.env.VITE_API_URL
     const [globalFilterValue, setGlobalFilterValue] = useState('');
-    const [first, setFirst] = useState(0);
-    const [rows, setRows] = useState(5);
     const [data, setData] = useState([]);
     const [showEmployeeModal, setShowEmployeeModal] = useState(false);
     const [newEmployee, setNewEmployee] = useState(
@@ -51,26 +47,14 @@ function EmployeeCardView() {
         dispatch(fetchEmployee()).finally(() => setLoading(false)); // Set loading to false after fetching
     }, [dispatch]);
 
-    const filters = {
-        global: { value: globalFilterValue, matchMode: FilterMatchMode.CONTAINS },
-        empName: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-        empPhoneNumber: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-    };
+
 
     const onGlobalFilterChange = (e) => {
         setGlobalFilterValue(e.target.value);
     };
-
-    const onPageChange = (event) => {
-        setFirst(event.first);
-        setRows(event.rows);
-    };
-
     const handleView = (rowData) => {
         const viewData = rowData;
         localStorage.setItem("Employee", JSON.stringify(viewData));
-        console.log(viewData);
-
         navigate('employeefullpage');
     };
 
@@ -111,40 +95,6 @@ function EmployeeCardView() {
             });
         }
     };
-
-    const actionBodyTemplate = (rowData) => {
-        return (
-            <div className="flex justify-content-around gap-3">
-                <button onClick={() => handleEdit(rowData)} style={{ borderRadius: "50%", border: "none", height: "40px", width: "40px", backgroundColor: "#EDF1FF", color: "#3454D1" }}>
-                    <i className="ri-edit-box-fill"></i>
-                </button>
-                <button onClick={() => handleBlock(rowData)} style={{ borderRadius: "50%", border: "none", height: "40px", width: "40px", backgroundColor: "#EDF1FF", color: "red" }}>
-                    <i className="ri-lock-line"></i>
-                </button>
-                <button onClick={() => handleView(rowData)} style={{ borderRadius: "50%", border: "none", height: "40px", width: "40px", backgroundColor: "#EDF1FF", color: "#3454D1", fontWeight: "bold" }}>
-                    <i className="ri-eye-line"></i>
-                </button>
-            </div>
-        );
-    };
-
-    const renderHeader = () => {
-        return (
-            <div className="flex justify-content-between gap-3 align-items-center p-2">
-                <h5>Employee List</h5>
-                <div>
-                    <InputText
-                        value={globalFilterValue}
-                        onChange={onGlobalFilterChange}
-                        placeholder="Search"
-                        style={{ width: "100%", maxWidth: "200px", marginRight: "10px" }}
-                    />
-                    <Button label="Add Employee" icon="pi pi-plus" onClick={openAddEmployeeModal} />
-                </div>
-            </div>
-        );
-    };
-
     const openAddEmployeeModal = () => {
         setIsEditing(false);
         setNewEmployee({ empName: '', empPhoneNumber: '', empEmail: '', empPassword: '', userType: 'Admin' });
@@ -213,11 +163,8 @@ function EmployeeCardView() {
         }
     };
 
-    const header = renderHeader();
 
-    const serialNumberTemplate = (rowData, { rowIndex }) => {
-        return rowIndex + 1 + first;
-    };
+  
 
     return (
         <div>
@@ -227,7 +174,7 @@ function EmployeeCardView() {
                         value={globalFilterValue}
                         onChange={onGlobalFilterChange}
                         placeholder="Search"
-                        style={{ width: "100%", maxWidth: "100px", marginRight: "10px" }}
+                        style={{ width: "100%", marginRight: "10px" }}
                     />
                     <Button label="Add Employee" icon="pi pi-plus" onClick={openAddEmployeeModal} />
                 </div>

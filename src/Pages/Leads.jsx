@@ -1,127 +1,136 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Dashboard from '../Components/Dashboard';
-import DynamicTable from '../Components/DynmicTables';
-import DynamicCard from '../Components/DynamicCard';
-import './CSS/Lead.css';
-import ModalForm from '../Components/LeadForm';
 import { Dropdown } from 'primereact/dropdown';
 import * as XLSX from 'xlsx';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchEmployee, fetchLeads, fetchPriority, fetchSources } from '../Features/LeadSlice';
+import { fetchEmployee, fetchPriority, fetchSources } from '../Features/LeadSlice';
 import axios from 'axios';
+import { Toast } from 'primereact/toast';
+import './CSS/Lead.css';
+import DynamicTable from '../Components/DynmicTables';
+import DynamicCard from '../Components/DynamicCard';
 import DeletedDynamicTable from '../Components/DeletedDynamicTable';
 import DeletedDynamicCard from '../Components/DeletedDynamicCard';
-import { Toast } from 'primereact/toast';
+import ModalForm from '../Components/LeadForm';
 
 function Leads() {
-  // State management
+  // Toast reference
+  const toast = useRef(null);
+  
+  // Redux
+  const dispatch = useDispatch();
+  const [selectedMyTags, setSelectedMyTags] = useState([]);
+
+  // API data
+  const APi_Url = import.meta.env.VITE_API_URL;
+  const AdminId = sessionStorage.getItem('AdminId');
+  const [employeeFilter, setEmployeeFilter] = useState(null);
+  const [tagsFilter, setTagsFilter] = useState([]);
+
+  // State management - all states at the top
   const [leadData, setLeadData] = useState([]);
-  const [lead, setLeads] = useState([]);
-  const [tableTitle] = useState('Leads');
+  const [leads, setLeads] = useState([]);
+  const [Deletedleads, setDeletedLeads] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [show, setShow] = useState(false);
   const [title, setTitle] = useState('');
   const [buttonTitle, setButtonTitle] = useState('');
-  const [fileData, setFileData] = useState([]);
-  const [show, setShow] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [first, setFirst] = useState(0);
+  const [rows, setRows] = useState(5);
+  const [totalRecords, setTotalRecords] = useState(0); 
+
+  // Form state
   const [selectedPriority, setSelectedPriority] = useState(null);
   const [selectedSource, setSelectedSource] = useState(null);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
-  
-  // Custom MultiSelect states
   const [selectedTags, setSelectedTags] = useState([]);
   const [selectedTagId, setSelectedTagId] = useState([]);
   const [tagSearchQuery, setTagSearchQuery] = useState('');
-  const [filteredTags, setFilteredTags] = useState([]);
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
   
-  // Refs and Redux
-  const tagData = useSelector((state) => state.leads.tag);
-  const tagDropdownRef = useRef(null);
-  const toast = useRef(null);
-  const dispatch = useDispatch();
-  
-  // API URL and Admin ID
-  const APi_Url = import.meta.env.VITE_API_URL;
-  const AdminId = sessionStorage.getItem('AdminId');
-  
-  // Selector data
+  // Redux state selectors (keeping these for other data)
   const priorityData = useSelector((state) => state.leads.Priority);
   const sourcesData = useSelector((state) => state.leads.leadSources);
   const employeeData = useSelector((state) => 
     state.leads.Employee?.filter(item => item?.blocked === false) || []
   );
+  const tagData = useSelector((state) => state.leads.tag);
 
-  // Options for dropdowns
-  const [priorityOptions, setPriorityOptions] = useState([]);
-  const [sourcesOptions, setSourcesOptions] = useState([]);
-  const [employee, setEmployee] = useState([]);
+  // Reference for tag dropdown
+  const tagDropdownRef = useRef(null);  
+  
+  const fetchDeletedLeads = async () => {
+    try {
+        const response = await axios.get(`${APi_Url}/digicoder/crm/api/v1/lead/getDeletedall/${AdminId}`);
+            setDeletedLeads(response.data.leads)
+            // console.log(response)
+    } catch (error) {
+        // console.error("Error fetching deleted leads:", error);
+    }
+};
 
-  // Constants
-  const MAX_VISIBLE_TAGS = 2;
 
-  // Event handlers
-  const handleClose = useCallback(() => setShow(false), []);
-  const handleShow = useCallback(() => setShow(true), []);
+  // Derived data
+  const filteredLead = leads.filter(item => !item.deleted) || [];
+  const deletedLead = Deletedleads
+  const tableTitle = 'Leads';
 
-  // Filter leads by deleted status
-  const filteredLead = lead.filter(lead => !lead.deleted);
-  const deletedLead = lead.filter(lead => lead.deleted);
+  // Dropdown options
+  const priorityOptions = Array.isArray(priorityData) 
+    ? priorityData.map(priority => ({
+        label: priority.priorityText,
+        value: priority._id
+      })) 
+    : [];
+  
+  const sourcesOptions = Array.isArray(sourcesData) 
+    ? sourcesData.map(sources => ({
+        label: sources.leadSourcesText,
+        value: sources._id
+      })) 
+    : [];
+  
+  const employeeOptions = Array.isArray(employeeData) 
+    ? employeeData.map(employee => ({
+        label: employee.empName,
+        value: employee._id
+      })) 
+    : [];
+  
+  // Filtered tags based on search
+  const filteredTags = Array.isArray(tagData) 
+    ? (tagSearchQuery.trim() === ''
+      ? tagData
+      : tagData.filter(tag => 
+          tag.tagName.toLowerCase().includes(tagSearchQuery.toLowerCase())
+        )
+    )
+    : [];
 
-  // Format dropdown options when data changes
+  // Handle tags filter change from the DynamicTable component
+  const handleTagsChange = (tags) => {
+    setSelectedMyTags(tags);
+    setTagsFilter(tags);
+    // Reset pagination when filter changes
+    setFirst(0);
+    // Fetch leads with the new tags filter
+    fetchLeads(1, rows, employeeFilter, tags);
+  };
+
+  // Initial data fetch
   useEffect(() => {
-    if (Array.isArray(sourcesData)) {
-      setSourcesOptions(
-        sourcesData.map(sources => ({
-          label: sources.leadSourcesText,
-          value: sources._id
-        }))
-      );
-    }
-    
-    if (Array.isArray(priorityData)) {
-      setPriorityOptions(
-        priorityData.map(priority => ({
-          label: priority.priorityText,
-          value: priority._id
-        }))
-      );
-    }
-    
-    if (Array.isArray(employeeData)) {
-      setEmployee(
-        employeeData.map(employee => ({
-          label: employee.empName,
-          value: employee._id
-        }))
-      );
-    }
-  }, [sourcesData, priorityData, employeeData]);
-
-  // Fetch initial data
-  useEffect(() => {
+    // Fetch data
     dispatch(fetchPriority());
     dispatch(fetchSources());
     dispatch(fetchEmployee());
-    fetchLead();
-  }, [dispatch]);
-
-  // Filter tags based on search query
-  useEffect(() => {
-    if (Array.isArray(tagData)) {
-      if (tagSearchQuery.trim() === '') {
-        setFilteredTags(tagData);
-      } else {
-        const filtered = tagData.filter(tag => 
-          tag.tagName.toLowerCase().includes(tagSearchQuery.toLowerCase())
-        );
-        setFilteredTags(filtered);
-      }
-    }
-  }, [tagSearchQuery, tagData]);
+    fetchLeads();
+    fetchDeletedLeads()
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -137,86 +146,120 @@ function Leads() {
     };
   }, []);
 
-  // API call to fetch leads
-  const fetchLead = useCallback(async () => {
+  // Updated fetchLeads to include tags filtering
+  const fetchLeads = async (page = 1, limit = 10, employeeId = employeeFilter, tags = tagsFilter) => {
     try {
-      const response = await axios.get(`${APi_Url}/digicoder/crm/api/v1/lead/getall/${AdminId}`);
-      if (response.data && response.data.leads) {
+      setIsLoading(true);
+      const response = await axios.get(`${APi_Url}/digicoder/crm/api/v1/lead/getall/${AdminId}`, {
+        params: {
+          page,
+          limit,
+          leadAssignedTo: employeeId !== null ? employeeId : undefined,
+          tags: tags && tags.length > 0 ? tags.join(',') : undefined
+        },
+      });
+
+      if (response.data?.success) {
         setLeads(response.data.leads);
+        setTotalRecords(response.data.totalLeads); 
+      } else {
+        setLeads([]);
+        setTotalRecords(0);
       }
     } catch (error) {
+      console.error("Error fetching leads:", error);
       toast.current?.show({
         severity: 'error',
         summary: 'Error',
         detail: 'Failed to fetch lead data.',
         life: 3000,
       });
+    } finally {
+      setIsLoading(false);
     }
-  }, [APi_Url, AdminId]);
+  };
 
-  // Open modal for adding a new lead
-  const handleAdd = useCallback(() => {
-    setTitle('Add New Lead');
-    setButtonTitle('Add Lead');
-    setIsModalOpen(true);
-  }, []);
+  // Employee filter handler
+  const handleEmployeeFilter = (employeeId) => {
+    setEmployeeFilter(employeeId);
+    fetchLeads(1, rows, employeeId, tagsFilter);
+  };
 
-  // Close modal
-  const closeModal = useCallback(() => {
-    setIsModalOpen(false);
-  }, []);
+  // Updated onPageChange handler
+  const onPageChange = (event) => {
+    const currentPage = Math.floor(event.first / event.rows) + 1;
+    setFirst(event.first);
+    setRows(event.rows);
+    fetchLeads(currentPage, event.rows, employeeFilter, tagsFilter); // Include both filters
+  };
 
-  // Handle Excel file upload
-  const handleFileUpload = useCallback((e) => {
-    setLoading(true);
+  // File upload handler
+  const handleFileUpload = (e) => {
     const file = e.target.files[0];
-
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        try {
-          const arrayBuffer = evt.target.result;
-          const wb = XLSX.read(arrayBuffer, { type: 'array' });
-          const ws = wb.Sheets[wb.SheetNames[0]];
-          const data = XLSX.utils.sheet_to_json(ws);
-
-          if (data.length > 0) {
-            setLeadData(data);
-            setFileData(data);
-          } else {
-            toast.current?.show({
-              severity: 'warn',
-              summary: 'No Data',
-              detail: 'No data found in the uploaded Excel file.',
-              life: 3000,
-            });
-          }
-        } catch (error) {
-          toast.current?.show({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Failed to process Excel file.',
-            life: 3000,
-          });
-        } finally {
-          setLoading(false);
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    } else {
+    if (!file) {
       toast.current?.show({
         severity: 'warn',
         summary: 'Missing File',
         detail: 'No file selected. Please choose a file to upload.',
         life: 3000,
       });
-      setLoading(false);
+      return;
     }
-  }, []);
+    
+    setIsProcessingFile(true);
+    
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const binaryStr = evt.target.result;
+        const wb = XLSX.read(binaryStr, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(ws);
 
-  // Handle bulk upload
-  const handleBulkUpload = useCallback(async () => {
-    if (!selectedSource || !selectedPriority) {
+        if (data.length > 0) {
+          setLeadData(data);
+        } else {
+          toast.current?.show({
+            severity: 'warn',
+            summary: 'No Data',
+            detail: 'No data found in the uploaded Excel file.',
+            life: 3000,
+          });
+        }
+      } catch (error) {
+        toast.current?.show({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to process Excel file.',
+          life: 3000,
+        });
+      } finally {
+        setIsProcessingFile(false);
+      }
+    };
+    
+    reader.readAsBinaryString(file);
+  };
+
+  // Modal handlers
+  const handleClose = () => setShow(false);
+  const handleShow = () => setShow(true);
+  
+  const handleAdd = () => {
+    setTitle('Add New Lead');
+    setButtonTitle('Add Lead');
+    setIsModalOpen(true);
+  };
+  
+  const closeModal = () => {
+    setIsModalOpen(false);
+    // Refresh leads after closing modal
+    fetchLeads();
+  };
+
+  // Bulk upload handler
+  const handleBulkUpload = async () => {
+    if (!selectedPriority || !selectedSource) {
       toast.current?.show({
         severity: 'warn',
         summary: 'Validation Warning',
@@ -238,7 +281,7 @@ function Leads() {
 
     setIsUploading(true);
 
-    // Apply selected values to all leads
+    // Process data
     const processedLeadData = leadData.map(lead => ({
       ...lead,
       priority: selectedPriority,
@@ -264,19 +307,17 @@ function Leads() {
           life: 3000,
         });
         
-        // First fetch updated data
-        await fetchLead();
-        
         // Reset states
         setLeadData([]);
-        setFileData([]);
         setSelectedPriority(null);
         setSelectedSource(null);
         setSelectedEmployee(null);
         setSelectedTags([]);
         setSelectedTagId([]);
+        setTagSearchQuery('');
+        setIsTagDropdownOpen(false);
         
-        // Close modal
+        await fetchLeads();
         handleClose();
       } else {
         toast.current?.show({
@@ -296,95 +337,94 @@ function Leads() {
     } finally {
       setIsUploading(false);
     }
-  }, [
-    selectedSource, 
-    selectedPriority, 
-    selectedEmployee, 
-    selectedTagId, 
-    leadData, 
-    handleClose, 
-    fetchLead, 
-    APi_Url, 
-    AdminId
-  ]);
+  };
 
   // Download sample file
-  const handleDownload = useCallback(() => {
+  const handleDownload = () => {
     const fileUrl = "/sample_leads.xlsx";
     const link = document.createElement("a");
     link.href = fileUrl;
     link.download = "sample_leads.xlsx";
     link.click();
-  }, []);
+  };
 
-  // Handle dropdown changes
-  const handlePriorityChange = useCallback((e) => {
+  // Dropdown handlers
+  const handlePriorityChange = (e) => {
     setSelectedPriority(e.value);
-  }, []);
+  };
 
-  const handleSourceChange = useCallback((e) => {
+  const handleSourceChange = (e) => {
     setSelectedSource(e.value);
-  }, []);
+  };
 
-  const handleEmployeeChange = useCallback((e) => {
+  const handleEmployeeChange = (e) => {
     setSelectedEmployee(e.value);
-  }, []);
+  };
 
-  // Custom MultiSelect functions
-  const toggleTagDropdown = useCallback(() => {
-    setIsTagDropdownOpen(prev => !prev);
-  }, []);
+  // Tag selection handlers
+  const toggleTagDropdown = () => {
+    setIsTagDropdownOpen(!isTagDropdownOpen);
+  };
 
-  const handleTagSearchChange = useCallback((e) => {
+  const handleTagSearchChange = (e) => {
     setTagSearchQuery(e.target.value);
-  }, []);
+  };
 
-  const toggleTagSelection = useCallback((myTag) => {
-    setSelectedTags(prev => {
-      if (prev.includes(myTag.tagName)) {
-        return prev.filter(tag => tag !== myTag.tagName);
-      } else {
-        return [...prev, myTag.tagName];
-      }
-    });
+  const toggleTagSelection = (myTag) => {
+    const tagIncluded = selectedTags.includes(myTag.tagName);
+    const idIncluded = selectedTagId.includes(myTag._id);
     
-    setSelectedTagId(prev => {
-      if (prev.includes(myTag._id)) {
-        return prev.filter(id => id !== myTag._id);
-      } else {
-        return [...prev, myTag._id];
-      }
-    });
-  }, []);
-
-  const removeTag = useCallback((tagToRemove, event) => {
-    if (event) {
-      event.stopPropagation();
+    if (tagIncluded) {
+      setSelectedTags(selectedTags.filter(tag => tag !== myTag.tagName));
+    } else {
+      setSelectedTags([...selectedTags, myTag.tagName]);
     }
-    setSelectedTags(prev => prev.filter(tag => tag !== tagToRemove));
     
-    // Find the tag id to remove
+    if (idIncluded) {
+      setSelectedTagId(selectedTagId.filter(id => id !== myTag._id));
+    } else {
+      setSelectedTagId([...selectedTagId, myTag._id]);
+    }
+  };
+
+  const removeTag = (tagToRemove, event) => {
+    if (event) event.stopPropagation();
+    
+    // Find tag ID to remove
     const tagToRemoveObj = tagData?.find(tag => tag.tagName === tagToRemove);
-    if (tagToRemoveObj) {
-      setSelectedTagId(prev => prev.filter(id => id !== tagToRemoveObj._id));
+    const tagId = tagToRemoveObj?._id;
+    
+    setSelectedTags(selectedTags.filter(tag => tag !== tagToRemove));
+    if (tagId) {
+      setSelectedTagId(selectedTagId.filter(id => id !== tagId));
     }
-  }, [tagData]);
-
-  const isTagSelected = useCallback((tagName) => {
-    return selectedTags.includes(tagName);
-  }, [selectedTags]);
+  };
 
   // Helper functions
-  const truncateTag = useCallback((tag, maxLength = 10) => {
-    return tag.length > maxLength ? `${tag.substring(0, maxLength)}...` : tag;
-  }, []);
+  const isTagSelected = (tagName) => {
+    return selectedTags.includes(tagName);
+  };
 
-  const getDisplayTags = useCallback(() => {
+  const truncateTag = (tag, maxLength = 10) => {
+    return tag.length > maxLength ? `${tag.substring(0, maxLength)}...` : tag;
+  };
+
+  const getDisplayTags = () => {
+    const MAX_VISIBLE_TAGS = 2;
     if (selectedTags.length <= MAX_VISIBLE_TAGS) {
       return selectedTags;
     }
     return [...selectedTags.slice(0, MAX_VISIBLE_TAGS)];
-  }, [selectedTags, MAX_VISIBLE_TAGS]);
+  };
+
+  // Clear all filters function
+  // const clearAllFilters = () => {
+  //   setEmployeeFilter(null);
+  //   setTagsFilter([]);
+  //   setSelectedMyTags([]);
+  //   setFirst(0);
+  //   fetchLeads(1, rows);
+  // };
 
   return (
     <div>
@@ -402,28 +442,81 @@ function Leads() {
               />
               <button onClick={handleShow}>Import Leads</button>
               <button onClick={handleAdd}>Add Lead</button>
+              {/* {(employeeFilter || tagsFilter.length > 0) && (
+                <button 
+                  onClick={clearAllFilters}
+                  style={{
+                    backgroundColor: '#6c757d',
+                    color: 'white'
+                  }}
+                >
+                  Clear All Filters
+                </button>
+              )} */}
             </div>
           </div>
 
-          {loading && <div className="loading">Processing file...</div>}
+          {isProcessingFile && <div className="loading">Processing file...</div>}
+          {isLoading && <div className="loading"></div>}
 
           {/* Table Section */}
           <div className="lead-table-container">
-            <DynamicTable className='dynamicTable' lead={filteredLead} tableTitle={tableTitle} />
+            <DynamicTable 
+              className='dynamicTable' 
+              lead={filteredLead} 
+              tableTitle={tableTitle} 
+              onUpdate={() => fetchLeads(Math.floor(first / rows) + 1, rows, employeeFilter, tagsFilter)} // Refresh current page with filters
+              onPageChange={onPageChange}
+              first={first}
+              rows={rows}
+              totalRecords={totalRecords}
+              loading={isLoading}
+              onEmployeeFilter={handleEmployeeFilter}
+              employeeOptions={employeeOptions} 
+              onTagsChange={handleTagsChange}
+              tagOptions={tagData || []} 
+              selectedTags={selectedMyTags}
+            />
           </div>
           <br /><br />
           <div className="lead-table-container">
-            <DeletedDynamicTable lead={deletedLead} tableTitle={"Deleted Leads"} />
+            <DeletedDynamicTable 
+              lead={deletedLead} 
+              tableTitle={"Deleted Leads"} 
+              onUpdate={fetchLeads}
+            />
           </div>
+          
+          {/* Card Section */}
           <div className="lead-card-container">
-            <DynamicCard className='dynamicTable' lead={filteredLead} tableTitle={tableTitle} />
+            {/* <DynamicCard 
+              className='dynamicTable' 
+              lead={filteredLead} 
+              tableTitle={tableTitle} 
+              onUpdate={fetchLeads}
+            /> */}
           </div>
           <br /><br />
           <div className="lead-card-container">
-            <DeletedDynamicCard lead={deletedLead} tableTitle={"Deleted Leads"} />
+            {/* <DeletedDynamicCard 
+              lead={deletedLead} 
+              tableTitle={"Deleted Leads"} 
+              onUpdate={fetchLeads}
+            /> */}
           </div>
           <br />
-          <ModalForm isOpen={isModalOpen} onClose={closeModal} title={title} buttonTitle={buttonTitle} leadData={filteredLead} />
+          
+          {/* Lead Form Modal */}
+          {isModalOpen && (
+            <ModalForm 
+              isOpen={isModalOpen} 
+              onClose={closeModal} 
+              title={title} 
+              buttonTitle={buttonTitle} 
+              leadData={filteredLead} 
+              onLeadAdded={fetchLeads}
+            />
+          )}
         </div>
 
         {/* Modal for Import and Download */}
@@ -447,6 +540,7 @@ function Leads() {
                   width: "50%"
                 }}
                 onClick={() => document.getElementById('import-excel').click()}
+                disabled={isUploading}
               >
                 Import Excel File
               </button>
@@ -460,6 +554,7 @@ function Leads() {
                   width: "50%"
                 }}
                 onClick={handleDownload}
+                disabled={isUploading}
               >
                 Download Sample File
               </button><br />
@@ -476,6 +571,7 @@ function Leads() {
                 placeholder="Select priority"
                 className="p-dropdown p-component"
                 required
+                disabled={isUploading}
               />
 
               <Dropdown
@@ -489,6 +585,7 @@ function Leads() {
                 placeholder="Select source"
                 className="p-dropdown p-component"
                 required
+                disabled={isUploading}
               />
             </div><br />
             <div style={{ display: "flex", gap: "10px" }}>
@@ -496,24 +593,25 @@ function Leads() {
                 id="employee"
                 name="employee"
                 value={selectedEmployee}
-                options={employee}
+                options={employeeOptions}
                 onChange={handleEmployeeChange}
                 optionLabel="label"
                 placeholder="Select Employee"
                 className="p-dropdown p-component"
                 style={{ width: "50%" }}
+                disabled={isUploading}
               />
+
               
-              {/* Custom MultiSelect implementation with fixed height */}
+              {/* Simple Tag selection dropdown */}
               <div 
                 ref={tagDropdownRef}
                 style={{ 
                   width: '50%', 
                   position: 'relative',
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"'
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
                 }}
               >
-                {/* MultiSelect header with fixed height */}
                 <div 
                   onClick={toggleTagDropdown}
                   style={{
@@ -569,7 +667,7 @@ function Leads() {
                             </span>
                           </div>
                         ))}
-                        {selectedTags.length > MAX_VISIBLE_TAGS && (
+                        {selectedTags.length > 2 && (
                           <div style={{
                             backgroundColor: '#e9ecef',
                             borderRadius: '3px',
@@ -577,7 +675,7 @@ function Leads() {
                             fontSize: '0.875rem',
                             whiteSpace: 'nowrap'
                           }}>
-                            +{selectedTags.length - MAX_VISIBLE_TAGS} more
+                            +{selectedTags.length - 2} more
                           </div>
                         )}
                       </>
@@ -586,7 +684,6 @@ function Leads() {
                   <span style={{ color: '#6c757d' }}>▼</span>
                 </div>
 
-                {/* Dropdown panel */}
                 {isTagDropdownOpen && (
                   <div style={{
                     position: 'absolute',
@@ -600,7 +697,6 @@ function Leads() {
                     boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
                     zIndex: 1000
                   }}>
-                    {/* Search input */}
                     <div style={{ padding: '0.5rem' }}>
                       <input
                         type="text"
@@ -616,7 +712,6 @@ function Leads() {
                       />
                     </div>
 
-                    {/* Selected tags counter */}
                     {selectedTags.length > 0 && (
                       <div style={{ 
                         padding: '0.25rem 0.75rem', 
@@ -628,7 +723,6 @@ function Leads() {
                       </div>
                     )}
 
-                    {/* Options list */}
                     <div style={{ 
                       maxHeight: '200px', 
                       overflowY: 'auto',
@@ -668,11 +762,24 @@ function Leads() {
               <button 
                 onClick={handleBulkUpload} 
                 className='saveBulk'
-                disabled={isUploading}
+                disabled={isUploading || leadData.length === 0}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: leadData.length === 0 ? '#ccc' : '#28a745',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '5px',
+                  cursor: leadData.length === 0 ? 'not-allowed' : 'pointer',
+                  width: '200px',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}
               >
                 {isUploading ? (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px" }}>
-                    <div className="spinner" style={{
+                  <>
+                    <div style={{
                       width: "20px",
                       height: "20px",
                       border: "3px solid rgba(255, 255, 255, 0.3)",
@@ -681,7 +788,7 @@ function Leads() {
                       animation: "spin 1s linear infinite"
                     }}></div>
                     <span>Uploading...</span>
-                  </div>
+                  </>
                 ) : 'Upload Leads'}
               </button>
             </div>
@@ -693,7 +800,7 @@ function Leads() {
           </Modal.Footer>
         </Modal>
 
-        {/* Add this CSS for the spinner animation */}
+        {/* CSS for spinner animation */}
         <style jsx>{`
           @keyframes spin {
             0% { transform: rotate(0deg); }
