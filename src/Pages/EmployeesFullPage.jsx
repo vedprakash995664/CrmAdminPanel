@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import Dashboard from '../Components/Dashboard';
 import axios from "axios";
 import Swal from 'sweetalert2';
-import { fetchLeads } from "../Features/LeadSlice";
+// import { fetchLeads } from "../Features/LeadSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
@@ -25,9 +25,9 @@ function EmployeesFullPage() {
   const APi_Url = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  
+
   // Employee Data
-  const EmployeeData = JSON.parse(localStorage.getItem("Employee")) ;
+  const EmployeeData = JSON.parse(localStorage.getItem("Employee"));
   const currentEmployeeId = EmployeeData._id;
   let EmpStatus = EmployeeData.blocked ? "Blocked" : "Active";
 
@@ -39,10 +39,10 @@ function EmployeesFullPage() {
   const [isEditing, setIsEditing] = useState(false);
 
   // Redux Leads Data
-  const leads = useSelector((state) => state.leads.leads);
-  const filteredLead = leads.filter((lead) => lead.deleted === false);
-  const closedLeads = leads.filter((lead) => lead.closed === true);
-  const NegativeLeads = leads.filter((lead) => lead.negative === true);
+  // const leads = useSelector((state) => state.leads.leads);
+  // const filteredLead = leads.filter((lead) => lead.deleted === false);
+  // const closedLeads = leads.filter((lead) => lead.closed === true);
+  // const NegativeLeads = leads.filter((lead) => lead.negative === true);
 
   // Form Data
   const [formData, setFormData] = useState({
@@ -75,7 +75,7 @@ function EmployeesFullPage() {
       // console.error("Error fetching assigned leads:", error);
     }
   };
-  
+
 
   // Fetch followups
   const fetchFollowUps = async () => {
@@ -90,49 +90,51 @@ function EmployeesFullPage() {
   // Calculate report metrics
   const calculateReportMetrics = () => {
     const today = new Date().toISOString().split('T')[0];
-    
+
     // Total assigned leads
     const totalAssigned = assignedLeads.length;
-    
+
     // Closed leads (both closed and not negative)
     const closedLeads = assignedLeads.filter(lead => lead.closed === true && lead.negative === false);
-    
+
     // Negative leads
     const negativeLeads = assignedLeads.filter(lead => lead.negative === true);
-    
-    // Pending leads (not closed and not negative)
-    const pendingLeads = assignedLeads.filter(lead => lead.closed === false && lead.negative === false);
-    
+
+
+
     // Today's followups
     const todaysFollowups = followupData.filter(item => {
       const createdDate = new Date(item.createdAt).toISOString().split('T')[0];
       return createdDate === today;
     }).length;
-    
+
     // Total followups
     const totalFollowups = followupData.length;
-    
+
+    // Pending leads (not closed and not negative)
+    const pendingLeads = totalAssigned-totalFollowups
+
     // Leads with no followups
     const leadsWithNoFollowups = assignedLeads.filter(lead => {
       return !followupData.some(followup => followup.leadId === lead._id);
     }).length;
-    
+
     // Unique tags
     const uniqueTagNames = [
       ...new Set(
         assignedLeads
-          .map(item => item.tags || [])       
-          .flat()                             
-          .map(tag => tag?.tagName)            
-          .filter(tagName => tagName)         
+          .map(item => item.tags || [])
+          .flat()
+          .map(tag => tag?.tagName)
+          .filter(tagName => tagName)
       )
     ];
-    
+
     return {
       totalAssigned,
       closedLeads: closedLeads.length,
       negativeLeads: negativeLeads.length,
-      pendingLeads: pendingLeads.length,
+      pendingLeads: pendingLeads,
       todaysFollowups,
       totalFollowups,
       leadsWithNoFollowups,
@@ -174,7 +176,7 @@ function EmployeesFullPage() {
         EmployeeDataEdit,
         { headers: { 'Content-Type': 'application/json' } }
       );
-      
+
       if (response.status === 200) {
         toast.success("Updated successfully!");
         setIsEditing(false);
@@ -228,7 +230,7 @@ function EmployeesFullPage() {
   useEffect(() => {
     fetchAssignedLeads();
     fetchFollowUps();
-    dispatch(fetchLeads());
+    // dispatch(fetchLeads());
 
     const tokenId = sessionStorage.getItem('Token');
     if (!tokenId) {
@@ -239,11 +241,11 @@ function EmployeesFullPage() {
   // Dialog footer
   const footerContent = (
     <div>
-      <Button 
-        label="Close" 
-        icon="pi pi-times" 
-        onClick={() => setVisible(false)} 
-        className="p-button-text" 
+      <Button
+        label="Close"
+        icon="pi pi-times"
+        onClick={() => setVisible(false)}
+        className="p-button-text"
       />
     </div>
   );
@@ -258,8 +260,8 @@ function EmployeesFullPage() {
                 <button onClick={handleBack}><i className="ri-arrow-left-line"></i> Back</button>
               </div>
               <div className="fullLeads-icons">
-                <button 
-                  style={{ color: EmployeeData.blocked ? "green" : "red" }} 
+                <button
+                  style={{ color: EmployeeData.blocked ? "green" : "red" }}
                   onClick={() => handleBlock()}
                 >
                   <i className={EmployeeData.blocked ? "ri-user-unfollow-fill" : "ri-user-follow-fill"}></i>
@@ -431,11 +433,11 @@ function EmployeesFullPage() {
 
             <div className="report-title">
               <span>EMPLOYEE PERFORMANCE REPORT</span>
-              <Button 
-                label="View Assigned Tags" 
-                icon="pi pi-tags" 
-                onClick={() => setVisible(true)} 
-                className="AssignedTagsBtn" 
+              <Button
+                label="View Assigned Tags"
+                icon="pi pi-tags"
+                onClick={() => setVisible(true)}
+                className="AssignedTagsBtn"
               />
             </div>
 
@@ -461,8 +463,8 @@ function EmployeesFullPage() {
                   <span>Closed Leads</span>
                   <p>{reportMetrics.closedLeads}</p>
                   <small>
-                    {reportMetrics.totalAssigned > 0 ? 
-                      `${Math.round((reportMetrics.closedLeads / reportMetrics.totalAssigned) * 100)}% Success Rate` : 
+                    {reportMetrics.totalAssigned > 0 ?
+                      `${Math.round((reportMetrics.closedLeads / reportMetrics.totalAssigned) * 100)}% Success Rate` :
                       'No leads assigned'}
                   </small>
                 </div>
@@ -489,8 +491,8 @@ function EmployeesFullPage() {
                   <span>Negative Leads</span>
                   <p>{reportMetrics.negativeLeads}</p>
                   <small>
-                    {reportMetrics.totalAssigned > 0 ? 
-                      `${Math.round((reportMetrics.negativeLeads / reportMetrics.totalAssigned) * 100)}% of total` : 
+                    {reportMetrics.totalAssigned > 0 ?
+                      `${Math.round((reportMetrics.negativeLeads / reportMetrics.totalAssigned) * 100)}% of total` :
                       ''}
                   </small>
                 </div>
@@ -517,7 +519,7 @@ function EmployeesFullPage() {
                   <span>Total Followups</span>
                   <p>{reportMetrics.totalFollowups}</p>
                   <small>
-                    Avg: {reportMetrics.totalAssigned > 0 ? 
+                    Avg: {reportMetrics.totalAssigned > 0 ?
                       Math.round(reportMetrics.totalFollowups / reportMetrics.totalAssigned) : 0} per lead
                   </small>
                 </div>
@@ -525,16 +527,16 @@ function EmployeesFullPage() {
             </div>
 
             {/* Tags Dialog */}
-            <Dialog 
-              className="AssignedTagsContainer" 
+            <Dialog
+              className="AssignedTagsContainer"
               header={
                 <div className="dialog-header">
                   <TagIcon style={{ marginRight: '10px' }} />
                   <span>Assigned Tags</span>
                 </div>
-              } 
-              visible={visible} 
-              onHide={() => setVisible(false)} 
+              }
+              visible={visible}
+              onHide={() => setVisible(false)}
               footer={footerContent}
               style={{ width: '50vw' }}
             >

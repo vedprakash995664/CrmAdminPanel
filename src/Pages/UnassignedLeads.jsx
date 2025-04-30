@@ -32,7 +32,7 @@ function UnassignedLeads() {
   const [buttonTitle, setButtonTitle] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [first, setFirst] = useState(0);
-  const [rows, setRows] = useState(5);
+  const [rows, setRows] = useState(30);
   const [totalRecords, setTotalRecords] = useState(0); 
   const [tableTitle] = useState('Unassigned Leads');
 

@@ -32,7 +32,7 @@ function AssignedLeads() {
   const [buttonTitle, setButtonTitle] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [first, setFirst] = useState(0);
-  const [rows, setRows] = useState(5);
+  const [rows, setRows] = useState(30);
   const [totalRecords, setTotalRecords] = useState(0); 
   const [tableTitle] = useState('Assigned Leads');
 
@@ -159,15 +159,16 @@ function AssignedLeads() {
             <span></span>
               <button onClick={handleAdd}>Add Lead</button>
               {(employeeFilter || tagsFilter.length > 0) && (
-                <button 
-                  onClick={clearAllFilters}
-                  style={{
-                    backgroundColor: '#6c757d',
-                    color: 'white'
-                  }}
-                >
-                  Clear All Filters
-                </button>
+                // <button 
+                //   onClick={clearAllFilters}
+                //   style={{
+                //     backgroundColor: '#6c757d',
+                //     color: 'white'
+                //   }}
+                // >
+                //   Clear All Filters
+                // </button>
+                <></>
               )}
             </div>
           </div>

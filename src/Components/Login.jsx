@@ -41,7 +41,7 @@ const Login = () => {
             setEmail("");
             setPassword("");
             setLoading(false); 
-            navigate('/dashboard');
+            navigate('/dashboard');  
           
         }
       } catch (error) {
@@ -78,8 +78,8 @@ const Login = () => {
         <p>Access Your Account</p>
 
         <form onSubmit={handleSubmit}>
-          <fieldset className={focusedField === "email" ? "focused" : ""}>
             <legend>Email</legend>
+          <fieldset className={focusedField === "email" ? "focused" : ""}>
             <div className="input-group">
               <input
                 type="email"
@@ -94,8 +94,8 @@ const Login = () => {
               />
             </div>
           </fieldset>
-          <fieldset className={focusedField === "password" ? "focused" : ""}>
             <legend>Password</legend>
+          <fieldset className={focusedField === "password" ? "focused" : ""}>
             <div className="input-group">
               <input
                 type="password"
