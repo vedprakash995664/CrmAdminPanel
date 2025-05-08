@@ -489,12 +489,22 @@ function Leads() {
           
           {/* Card Section */}
           <div className="lead-card-container">
-            {/* <DynamicCard 
-              className='dynamicTable' 
-              lead={filteredLead} 
-              tableTitle={tableTitle} 
-              onUpdate={fetchLeads}
-            /> */}
+            <DynamicCard 
+                className='dynamicTable' 
+                lead={filteredLead} 
+                tableTitle={tableTitle} 
+                onUpdate={() => fetchLeads(Math.floor(first / rows) + 1, rows, employeeFilter, tagsFilter)} // Refresh current page with filters
+                onPageChange={onPageChange}
+                first={first}
+                rows={rows}
+                totalRecords={totalRecords}
+                loading={isLoading}
+                onEmployeeFilter={handleEmployeeFilter}
+                employeeOptions={employeeOptions} 
+                onTagsChange={handleTagsChange}
+                tagOptions={tagData || []} 
+                selectedTags={selectedMyTags}
+            />
           </div>
           <br /><br />
           <div className="lead-card-container">

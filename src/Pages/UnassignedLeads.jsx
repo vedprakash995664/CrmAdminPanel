@@ -32,7 +32,7 @@ function UnassignedLeads() {
   const [buttonTitle, setButtonTitle] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [first, setFirst] = useState(0);
-  const [rows, setRows] = useState(30);
+  const [rows, setRows] = useState(100);
   const [totalRecords, setTotalRecords] = useState(0); 
   const [tableTitle] = useState('Unassigned Leads');
 
@@ -169,14 +169,22 @@ function UnassignedLeads() {
           
           {/* Card Section */}
           <div className="lead-card-container">
-            {/* <DynamicCard 
-              className='dynamicTable' 
-              lead={leads} 
-              tableTitle={tableTitle} 
-              onUpdate={fetchUnassignedLeads}
-              showAssignButton={true} // Option to show assign button in each card
-              onAssignSuccess={fetchUnassignedLeads}
-            /> */}
+            <DynamicCard 
+                  className='dynamicTable' 
+                  lead={leads} 
+                  tableTitle={tableTitle} 
+                  onUpdate={() => fetchUnassignedLeads(Math.floor(first / rows) + 1, rows, tagsFilter)} 
+                  onPageChange={onPageChange}
+                  first={first}
+                  rows={rows}
+                  totalRecords={totalRecords}
+                  loading={isLoading}
+                  onTagsChange={handleTagsChange}
+                  tagOptions={tagData || []} 
+                  selectedTags={selectedMyTags}
+                  showAssignButton={true} // Option to show assign button in each row
+                  onAssignSuccess={fetchUnassignedLeads}
+            />
           </div>
           
           {/* Lead Form Modal */}

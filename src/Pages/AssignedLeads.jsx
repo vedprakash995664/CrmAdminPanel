@@ -32,7 +32,7 @@ function AssignedLeads() {
   const [buttonTitle, setButtonTitle] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [first, setFirst] = useState(0);
-  const [rows, setRows] = useState(30);
+  const [rows, setRows] = useState(100);
   const [totalRecords, setTotalRecords] = useState(0); 
   const [tableTitle] = useState('Assigned Leads');
 
@@ -197,12 +197,22 @@ function AssignedLeads() {
           
           {/* Card Section */}
           <div className="lead-card-container">
-            {/* <DynamicCard 
-              className='dynamicTable' 
-              lead={filteredLead} 
-              tableTitle={tableTitle} 
-              onUpdate={fetchAssignedLeads}
-            /> */}
+            <DynamicCard 
+            className='dynamicTable' 
+            lead={filteredLead} 
+            tableTitle={tableTitle} 
+            onUpdate={() => fetchAssignedLeads(Math.floor(first / rows) + 1, rows, employeeFilter, tagsFilter)} // Refresh current page with filters
+            onPageChange={onPageChange}
+            first={first}
+            rows={rows}
+            totalRecords={totalRecords}
+            loading={isLoading}
+            onEmployeeFilter={handleEmployeeFilter}
+            employeeOptions={employeeOptions} 
+            onTagsChange={handleTagsChange}
+            tagOptions={tagData || []} 
+            selectedTags={selectedMyTags}
+            />
           </div>
           
           {/* Lead Form Modal */}
