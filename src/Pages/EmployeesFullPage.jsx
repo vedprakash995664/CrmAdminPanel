@@ -5,12 +5,12 @@ import { useNavigate } from "react-router-dom";
 import Dashboard from '../Components/Dashboard';
 import axios from "axios";
 import Swal from 'sweetalert2';
-// import { fetchLeads } from "../Features/LeadSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
+import { Calendar } from 'primereact/calendar';
+import { format } from 'date-fns';
 
-// Material UI Icons
 import PendingActionsIcon from '@mui/icons-material/PendingActions';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import TodayIcon from '@mui/icons-material/Today';
@@ -18,6 +18,7 @@ import WorkHistoryIcon from '@mui/icons-material/WorkHistory';
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
 import CancelIcon from '@mui/icons-material/Cancel';
 import TagIcon from '@mui/icons-material/Tag';
+import FilterAltIcon from '@mui/icons-material/FilterAlt';
 
 import './CSS/EmployeesFullPage.css';
 
@@ -26,25 +27,20 @@ function EmployeesFullPage() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  // Employee Data
   const EmployeeData = JSON.parse(localStorage.getItem("Employee"));
   const currentEmployeeId = EmployeeData._id;
   let EmpStatus = EmployeeData.blocked ? "Blocked" : "Active";
 
-  // State Management
   const [assignedLeads, setAssignedLeads] = useState([]);
   const [followupData, setFollowUpData] = useState([]);
   const [visible, setVisible] = useState(false);
   const [isDisabled, setIsDisabled] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [dateFilterVisible, setDateFilterVisible] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [followupsForDate, setFollowupsForDate] = useState([]);
+  const [followupsModalVisible, setFollowupsModalVisible] = useState(false);
 
-  // Redux Leads Data
-  // const leads = useSelector((state) => state.leads.leads);
-  // const filteredLead = leads.filter((lead) => lead.deleted === false);
-  // const closedLeads = leads.filter((lead) => lead.closed === true);
-  // const NegativeLeads = leads.filter((lead) => lead.negative === true);
-
-  // Form Data
   const [formData, setFormData] = useState({
     Name: EmployeeData?.empName || "",
     Email: EmployeeData?.empEmail || "",
@@ -61,7 +57,6 @@ function EmployeesFullPage() {
     Status: EmpStatus,
   });
 
-  // Fetch assigned leads
   const fetchAssignedLeads = async () => {
     try {
       const response = await axios.get(`${APi_Url}/digicoder/crm/api/v1/lead/empgetall/${currentEmployeeId}`);
@@ -72,12 +67,9 @@ function EmployeesFullPage() {
       } else {
         toast.error("Failed to fetch assigned leads");
       }
-      // console.error("Error fetching assigned leads:", error);
     }
   };
 
-
-  // Fetch followups
   const fetchFollowUps = async () => {
     try {
       const response = await axios.get(`${APi_Url}/digicoder/crm/api/v1/followup/getfollowedby/${currentEmployeeId}`);
@@ -87,39 +79,23 @@ function EmployeesFullPage() {
     }
   };
 
-  // Calculate report metrics
   const calculateReportMetrics = () => {
     const today = new Date().toISOString().split('T')[0];
 
-    // Total assigned leads
     const totalAssigned = assignedLeads.length;
-
-    // Closed leads (both closed and not negative)
     const closedLeads = assignedLeads.filter(lead => lead.closed === true && lead.negative === false);
-
-    // Negative leads
     const negativeLeads = assignedLeads.filter(lead => lead.negative === true);
-
-
-
-    // Today's followups
     const todaysFollowups = followupData.filter(item => {
       const createdDate = new Date(item.createdAt).toISOString().split('T')[0];
       return createdDate === today;
     }).length;
 
-    // Total followups
     const totalFollowups = followupData.length;
-
-    // Pending leads (not closed and not negative)
     const pendingLeads = totalAssigned-totalFollowups
-
-    // Leads with no followups
     const leadsWithNoFollowups = assignedLeads.filter(lead => {
       return !followupData.some(followup => followup.leadId === lead._id);
     }).length;
 
-    // Unique tags
     const uniqueTagNames = [
       ...new Set(
         assignedLeads
@@ -144,7 +120,6 @@ function EmployeesFullPage() {
 
   const reportMetrics = calculateReportMetrics();
 
-  // Form handlers
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({ ...prevData, [name]: value }));
@@ -226,11 +201,27 @@ function EmployeesFullPage() {
     }
   };
 
-  // Effects
+  const handleDateFilterClick = () => {
+    setDateFilterVisible(true);
+  };
+
+  const handleDateSelect = (e) => {
+    setSelectedDate(e.value);
+    setDateFilterVisible(false);
+    
+    const filtered = followupData.filter(item => {
+      const followupDate = new Date(item.createdAt).toISOString().split('T')[0];
+      const selectedDateStr = format(e.value, 'yyyy-MM-dd');
+      return followupDate === selectedDateStr;
+    });
+    
+    setFollowupsForDate(filtered);
+    setFollowupsModalVisible(true);
+  };
+
   useEffect(() => {
     fetchAssignedLeads();
     fetchFollowUps();
-    // dispatch(fetchLeads());
 
     const tokenId = sessionStorage.getItem('Token');
     if (!tokenId) {
@@ -238,7 +229,6 @@ function EmployeesFullPage() {
     }
   }, [dispatch, navigate]);
 
-  // Dialog footer
   const footerContent = (
     <div>
       <Button
@@ -433,28 +423,28 @@ function EmployeesFullPage() {
 
             <div className="report-title">
               <span>EMPLOYEE PERFORMANCE REPORT</span>
-              <Button
-                label="View Assigned Tags"
-                icon="pi pi-tags"
-                onClick={() => setVisible(true)}
-                className="AssignedTagsBtn"
-              />
+              <div className="report-filter-buttons">
+                <Button
+                  label="View Assigned Tags"
+                  icon="pi pi-tags"
+                  onClick={() => setVisible(true)}
+                  className="AssignedTagsBtn"
+                />
+              </div>
             </div>
 
             <div className="report-grid">
-              {/* Assigned Leads Card */}
               <div className="report-card">
                 <div className="report-icon">
                   <AssignmentIndIcon style={{ fontSize: "40px", color: "#3f51b5" }} />
                 </div>
-                <div className="report-content">
+                <div className="report-content" >
                   <span>Assigned Leads</span>
                   <p>{reportMetrics.totalAssigned}</p>
                   <small>Total leads assigned to this employee</small>
                 </div>
               </div>
 
-              {/* Closed Leads Card */}
               <div className="report-card success-card">
                 <div className="report-icon">
                   <CheckCircleIcon style={{ fontSize: "40px", color: "white" }} />
@@ -470,7 +460,6 @@ function EmployeesFullPage() {
                 </div>
               </div>
 
-              {/* Pending Leads Card */}
               <div className="report-card warning-card">
                 <div className="report-icon">
                   <PendingActionsIcon style={{ fontSize: "40px", color: "white" }} />
@@ -482,7 +471,6 @@ function EmployeesFullPage() {
                 </div>
               </div>
 
-              {/* Negative Leads Card */}
               <div className="report-card danger-card">
                 <div className="report-icon">
                   <CancelIcon style={{ fontSize: "40px", color: "white" }} />
@@ -498,7 +486,6 @@ function EmployeesFullPage() {
                 </div>
               </div>
 
-              {/* Today's Followups Card */}
               <div className="report-card info-card">
                 <div className="report-icon">
                   <TodayIcon style={{ fontSize: "40px", color: "white" }} />
@@ -510,7 +497,6 @@ function EmployeesFullPage() {
                 </div>
               </div>
 
-              {/* Total Followups Card */}
               <div className="report-card primary-card">
                 <div className="report-icon">
                   <WorkHistoryIcon style={{ fontSize: "40px", color: "white" }} />
@@ -522,11 +508,20 @@ function EmployeesFullPage() {
                     Avg: {reportMetrics.totalAssigned > 0 ?
                       Math.round(reportMetrics.totalFollowups / reportMetrics.totalAssigned) : 0} per lead
                   </small>
+                  
+                  {/* Filter Button */}
+                  <div className="card-filter-button">
+                    <Button
+                      label="Filter"
+                      onClick={handleDateFilterClick}
+                      className="p-button-sm p-button-info"
+                      aria-label="Filter by Date"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Tags Dialog */}
             <Dialog
               className="AssignedTagsContainer"
               header={
@@ -549,6 +544,41 @@ function EmployeesFullPage() {
                   ))
                 ) : (
                   <p className="no-tags-message">No tags assigned to this employee's leads</p>
+                )}
+              </div>
+            </Dialog>
+
+            <Dialog
+              header="Select Date to Filter Followups"
+              visible={dateFilterVisible}
+              onHide={() => setDateFilterVisible(false)}
+              style={{ width: '350px' }}
+            >
+              <div className="p-fluid">
+                <Calendar 
+                  value={selectedDate} 
+                  onChange={handleDateSelect}
+                  dateFormat="dd/mm/yy"
+                  // showIcon
+                />
+              </div>
+            </Dialog>
+
+            <Dialog
+              header={`Followups on ${selectedDate ? format(selectedDate, 'MMMM do, yyyy') : ''}`}
+              visible={followupsModalVisible}
+              onHide={() => setFollowupsModalVisible(false)}
+              style={{ width: '50vw' }}
+            >
+              <div className="followups-results">
+                {followupsForDate.length > 0 ? (
+                  <>
+                    <div className="total-followups">
+                      <h3>Total Followups: {followupsForDate.length}</h3>
+                    </div>
+                  </>
+                ) : (
+                  <p>No followups found for this date</p>
                 )}
               </div>
             </Dialog>
