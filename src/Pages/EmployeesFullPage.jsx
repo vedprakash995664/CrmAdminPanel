@@ -91,7 +91,7 @@ function EmployeesFullPage() {
     }).length;
 
     const totalFollowups = followupData.length;
-    const pendingLeads = totalAssigned-totalFollowups
+    const pendingLeads = Math.max(0, totalAssigned - totalFollowups);
     const leadsWithNoFollowups = assignedLeads.filter(lead => {
       return !followupData.some(followup => followup.leadId === lead._id);
     }).length;
@@ -110,7 +110,7 @@ function EmployeesFullPage() {
       totalAssigned,
       closedLeads: closedLeads.length,
       negativeLeads: negativeLeads.length,
-      pendingLeads: pendingLeads,
+      pendingLeads,
       todaysFollowups,
       totalFollowups,
       leadsWithNoFollowups,
@@ -509,7 +509,6 @@ function EmployeesFullPage() {
                       Math.round(reportMetrics.totalFollowups / reportMetrics.totalAssigned) : 0} per lead
                   </small>
                   
-                  {/* Filter Button */}
                   <div className="card-filter-button">
                     <Button
                       label="Filter"
@@ -559,7 +558,6 @@ function EmployeesFullPage() {
                   value={selectedDate} 
                   onChange={handleDateSelect}
                   dateFormat="dd/mm/yy"
-                  // showIcon
                 />
               </div>
             </Dialog>
