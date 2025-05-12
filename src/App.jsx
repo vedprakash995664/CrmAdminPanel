@@ -17,6 +17,7 @@ import FullLeads from './Pages/FullLeads'
 import Profile from './Pages/Profile'
 import EmployeeCardView from './Pages/EmployeeCardView'
 import EmployeesFullPage from './Pages/EmployeesFullPage';
+import ExportNumbers from './Pages/ExportNumbers';
 
 function App() {
 
@@ -32,6 +33,7 @@ function App() {
           <Route path='/unassignedLeads' element={<UnassignedLead/>}/>
           <Route path='/employee' element={<Employee/>}/>
           <Route  path='/profile' element={<Profile/>}/>
+          <Route  path='/exportNumbers' element={<ExportNumbers/>}/>
           <Route  path='/employee/employeefullpage' element={<EmployeesFullPage/>}/>
 
           <Route path='/card' element={<DynamicCard/>}/>

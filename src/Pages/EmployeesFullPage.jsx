@@ -18,7 +18,7 @@ import WorkHistoryIcon from '@mui/icons-material/WorkHistory';
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
 import CancelIcon from '@mui/icons-material/Cancel';
 import TagIcon from '@mui/icons-material/Tag';
-import FilterAltIcon from '@mui/icons-material/FilterAlt';
+// import FilterAltIcon from '@mui/icons-material/FilterAlt';
 
 import './CSS/EmployeesFullPage.css';
 
@@ -83,8 +83,8 @@ function EmployeesFullPage() {
     const today = new Date().toISOString().split('T')[0];
 
     const totalAssigned = assignedLeads.length;
-    const closedLeads = assignedLeads.filter(lead => lead.closed === true && lead.negative === false);
-    const negativeLeads = assignedLeads.filter(lead => lead.negative === true);
+    const closedLeads = assignedLeads.filter(lead => lead.closed === true && lead.negative === false && lead.deleted===false);
+    const negativeLeads = assignedLeads.filter(lead => lead.negative === true && lead.deleted===false  && lead.closed===false);
     const todaysFollowups = followupData.filter(item => {
       const createdDate = new Date(item.createdAt).toISOString().split('T')[0];
       return createdDate === today;
@@ -532,7 +532,7 @@ function EmployeesFullPage() {
               visible={visible}
               onHide={() => setVisible(false)}
               footer={footerContent}
-              style={{ width: '50vw' }}
+                
             >
               <div className="tags-container">
                 {reportMetrics.uniqueTagNames.length > 0 ? (
@@ -554,10 +554,11 @@ function EmployeesFullPage() {
               style={{ width: '350px' }}
             >
               <div className="p-fluid">
-                <Calendar 
+                <Calendar   
                   value={selectedDate} 
                   onChange={handleDateSelect}
                   dateFormat="dd/mm/yy"
+                  placeholder="Select Date"
                 />
               </div>
             </Dialog>

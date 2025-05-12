@@ -18,6 +18,8 @@
     "axios": "^1.7.9",
     "bootstrap": "^5.3.3",
     "chart.js": "^4.4.7",
+    "jspdf": "^3.0.1",
+    "jspdf-autotable": "^5.0.2",
     "lodash-es": "^4.17.21",
     "lodash.debounce": "^4.0.8",
     "primeflex": "^3.3.1",

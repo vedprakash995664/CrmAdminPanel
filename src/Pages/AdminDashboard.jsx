@@ -26,16 +26,24 @@ function MainDashboard() {
   const fetchEmployee = async () => {
     try {
       setEmployeeLoading(true);
-      const response = await axios.get(`${APi_Url}/digicoder/crm/api/v1/employee/getall/${AdminId}`);
-      if (response.data?.success) {
-        const allEmployees = response.data.employees;
-        const inactiveEmployees = allEmployees.filter(emp => emp.blocked === true);
-        setTotalEmployees(allEmployees.length);
-        setTotalUnactiveEmployees(inactiveEmployees.length);
+
+      const [allRes, blockedRes] = await Promise.all([
+        axios.get(`${APi_Url}/digicoder/crm/api/v1/employee/getall/${AdminId}`),
+        axios.get(`${APi_Url}/digicoder/crm/api/v1/employee/employees/blocked/${AdminId}`)
+      ]);
+
+      if (allRes.data?.success) {
+        setTotalEmployees(allRes.data.employees.length);
       } else {
         setTotalEmployees(0);
+      }
+
+      if (blockedRes.data?.success) {
+        setTotalUnactiveEmployees(blockedRes.data.employees.length);
+      } else {
         setTotalUnactiveEmployees(0);
       }
+
     } catch (error) {
       toast.current?.show({
         severity: 'error',
@@ -104,6 +112,21 @@ function MainDashboard() {
     }
   }, [navigate]);
 
+  const actionCards = [
+    {
+      title: 'Add Lead',
+      icon: 'ri-user-add-line',
+      route: '/addLead',
+      color: '#4CAF50'
+    },
+    {
+      title: 'Import Leads',
+      icon: 'ri-download-line',
+      route: '/importLeads',
+      color: '#2196F3'
+    }
+  ];
+
   const metrics = [
     {
       title: 'Total Leads',
@@ -154,6 +177,13 @@ function MainDashboard() {
       loading: tagsLoading,
       route: '/tag',
     },
+    {
+      title: 'Export Numbers',
+      icon: 'ri-download-2-line', // Changed icon for Export Numbers
+      value: 'Export', // Changed value to text
+      loading: tagsLoading,
+      route: '/exportNumbers',
+    },
   ];
 
   return (
@@ -161,6 +191,26 @@ function MainDashboard() {
       <Toast ref={toast} />
       <div className="main-dashboard-container">
         <div className="main-dashboard-outer">
+          {/* Action Cards Row */}
+          <div className="dashboard-cards-container">
+            {actionCards.map((card, index) => (
+              <div
+                className="dashboard-card action-card"
+                key={`action-${index}`}
+                onClick={() => navigate(card.route)}
+                style={{ backgroundColor: card.color, cursor: 'pointer' }}
+              >
+                <div className="card-icon">
+                  <i className={card.icon} style={{ color: 'white' }}></i>
+                </div>
+                <div className="card-content">
+                  <h4 style={{ color: 'white' }}>{card.title}</h4>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          {/* Metrics Cards */}
           <div className="dashboard-cards-container">
             {metrics.map((metric, index) => {
               const handleClick = () => {
@@ -195,6 +245,7 @@ function MainDashboard() {
               );
             })}
           </div>
+          
           <div className="main-dashboard-bottom">
             <div className="main-table-container"></div>
           </div>
