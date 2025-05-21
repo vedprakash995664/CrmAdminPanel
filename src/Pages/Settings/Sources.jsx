@@ -12,8 +12,11 @@ import axios from 'axios';
 
 function Sources() {
   const [show, setShow] = useState(false);
-  const APi_Url = import.meta.env.VITE_API_URL;
   const [SourcesText, setSourcesText] = useState('');
+  const [loading, setLoading] = useState(false);     // For full page loader
+  const [btnLoading, setBtnLoading] = useState(false); // For Save button loader
+
+  const APi_Url = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const sourcesData = useSelector((state) => state.leads.leadSources);
@@ -22,6 +25,7 @@ function Sources() {
     setShow(false);
     setSourcesText('');
   };
+
   const handleShow = () => setShow(true);
 
   useEffect(() => {
@@ -32,12 +36,15 @@ function Sources() {
   }, [navigate]);
 
   useEffect(() => {
-    dispatch(fetchSources());
+    const loadSources = async () => {
+      setLoading(true);
+      await dispatch(fetchSources());
+      setLoading(false);
+    };
+    loadSources();
   }, [dispatch]);
 
-  const srNoTemplate = (rowData, { rowIndex }) => {
-    return <span>{rowIndex + 1}</span>;
-  };
+  const srNoTemplate = (rowData, { rowIndex }) => <span>{rowIndex + 1}</span>;
 
   const handleSaveSource = async () => {
     if (SourcesText.trim() === '') {
@@ -46,17 +53,19 @@ function Sources() {
     }
 
     try {
+      setBtnLoading(true);
       const AdminId = sessionStorage.getItem('AdminId');
       const userType = 'Admin';
       const apiUrl = `${APi_Url}/digicoder/crm/api/v1/leadSources/add/${AdminId}`;
       await axios.post(apiUrl, { SourcesText, userType });
       toast.success('Source added successfully');
-      
       setSourcesText('');
       setShow(false);
-      dispatch(fetchSources());
+      await dispatch(fetchSources());
     } catch (error) {
       toast.error('Error saving source');
+    } finally {
+      setBtnLoading(false);
     }
   };
 
@@ -71,31 +80,34 @@ function Sources() {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
+          setLoading(true);
           const apiUrl = `${APi_Url}/digicoder/crm/api/v1/leadSources/delete/${rowData._id}`;
           await axios.delete(apiUrl);
           toast.success('Source deleted successfully');
-          dispatch(fetchSources());
+          await dispatch(fetchSources());
         } catch (error) {
           toast.error('Error deleting source');
+        } finally {
+          setLoading(false);
         }
       }
     });
   };
 
-  const actionBodyTemplate = (rowData) => {
-    return (
-      <div>
-        <button
-          style={{
-            color: "red", backgroundColor: "transparent", border: "none", fontSize: "20px", cursor: "pointer"
-          }}
-          onClick={() => handleDelete(rowData)}
-        >
-          <i className="ri-delete-bin-5-fill"></i>
-        </button>
-      </div>
-    );
-  };
+  const actionBodyTemplate = (rowData) => (
+    <button
+      style={{
+        color: "red",
+        backgroundColor: "transparent",
+        border: "none",
+        fontSize: "20px",
+        cursor: "pointer"
+      }}
+      onClick={() => handleDelete(rowData)}
+    >
+      <i className="ri-delete-bin-5-fill"></i>
+    </button>
+  );
 
   return (
     <div>
@@ -107,7 +119,13 @@ function Sources() {
                 <h1>Sources</h1>
                 <button
                   style={{
-                    border: "none", backgroundColor: "#3454D1", color: "white", fontSize: "18px", borderRadius: "10px", cursor: "pointer", padding: "0px 20px"
+                    border: "none",
+                    backgroundColor: "#3454D1",
+                    color: "white",
+                    fontSize: "18px",
+                    borderRadius: "10px",
+                    cursor: "pointer",
+                    padding: "0px 20px"
                   }}
                   onClick={handleShow}
                 >
@@ -115,14 +133,20 @@ function Sources() {
                 </button>
               </div>
 
-              {Array.isArray(sourcesData) && sourcesData.length > 0 ? (
-                <DataTable value={sourcesData} stripedRows bordered>
-                  <Column body={srNoTemplate} header="Sr. No." sortable></Column>
-                  <Column field="leadSourcesText" header="Source" sortable></Column>
-                  <Column header="Action" body={actionBodyTemplate}></Column>
-                </DataTable>
+              {loading ? (
+                <div className="loader-wrapper">
+                  <div className="custom-loader"></div>
+                </div>
               ) : (
-                <div>No source data available</div>
+                Array.isArray(sourcesData) && sourcesData.length > 0 ? (
+                  <DataTable value={sourcesData} stripedRows bordered>
+                    <Column body={srNoTemplate} header="Sr. No." sortable />
+                    <Column field="leadSourcesText" header="Source" sortable />
+                    <Column header="Action" body={actionBodyTemplate} />
+                  </DataTable>
+                ) : (
+                  <div style={{ padding: "1rem" }}>No source data available</div>
+                )
               )}
 
               <Modal
@@ -144,12 +168,27 @@ function Sources() {
                       style={{ outline: "none", padding: "8px", width: "100%" }}
                     />
                     <button
-                      style={{
-                        marginLeft: "10px", padding: "10px 26px", border: "none", backgroundColor: "#3454D1", color: "white", fontSize: "20px"
-                      }}
                       onClick={handleSaveSource}
+                      disabled={btnLoading}
+                      style={{
+                        marginLeft: "10px",
+                        padding: "10px 26px",
+                        border: "none",
+                        backgroundColor: "#3454D1",
+                        color: "white",
+                        fontSize: "20px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        cursor: btnLoading ? "not-allowed" : "pointer",
+                        opacity: btnLoading ? 0.7 : 1
+                      }}
                     >
-                      Save
+                      {btnLoading ? (
+                        <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                      ) : (
+                        "Save"
+                      )}
                     </button>
                   </div>
                 </Modal.Body>
@@ -158,6 +197,47 @@ function Sources() {
           </div>
         </div>
       </Dashboard>
+
+      {/* Loaders CSS */}
+      <style>{`
+        .loader-wrapper {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding: 40px 0;
+        }
+
+        .custom-loader {
+          width: 60px;
+          height: 60px;
+          border: 6px solid #f3f3f3;
+          border-top: 6px solid #3454D1;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        .spinner-border {
+          display: inline-block;
+          width: 1rem;
+          height: 1rem;
+          vertical-align: text-bottom;
+          border: 0.15em solid currentColor;
+          border-right-color: transparent;
+          border-radius: 50%;
+          animation: spinner-border .75s linear infinite;
+        }
+
+        @keyframes spinner-border {
+          100% {
+            transform: rotate(360deg);
+          }
+        }
+      `}</style>
     </div>
   );
 }

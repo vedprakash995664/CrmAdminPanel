@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 import Dashboard from '../Components/Dashboard';
 import axios from "axios";
 import Swal from 'sweetalert2';
-import { useDispatch, useSelector } from "react-redux";
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { Calendar } from 'primereact/calendar';
@@ -18,21 +17,22 @@ import WorkHistoryIcon from '@mui/icons-material/WorkHistory';
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
 import CancelIcon from '@mui/icons-material/Cancel';
 import TagIcon from '@mui/icons-material/Tag';
-// import FilterAltIcon from '@mui/icons-material/FilterAlt';
+import CircularProgress from '@mui/material/CircularProgress';
 
 import './CSS/EmployeesFullPage.css';
 
 function EmployeesFullPage() {
   const APi_Url = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
-  const dispatch = useDispatch();
 
   const EmployeeData = JSON.parse(localStorage.getItem("Employee"));
   const currentEmployeeId = EmployeeData._id;
   let EmpStatus = EmployeeData.blocked ? "Blocked" : "Active";
 
+  // State variables
   const [assignedLeads, setAssignedLeads] = useState([]);
   const [followupData, setFollowUpData] = useState([]);
+  const [pendingLeads, setPendingLeads] = useState([]);
   const [visible, setVisible] = useState(false);
   const [isDisabled, setIsDisabled] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -40,6 +40,12 @@ function EmployeesFullPage() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [followupsForDate, setFollowupsForDate] = useState([]);
   const [followupsModalVisible, setFollowupsModalVisible] = useState(false);
+  const [loading, setLoading] = useState({
+    assignedLeads: true,
+    followups: true,
+    pendingLeads: true,
+    tags: true // Added loading state for tags
+  });
 
   const [formData, setFormData] = useState({
     Name: EmployeeData?.empName || "",
@@ -57,16 +63,33 @@ function EmployeesFullPage() {
     Status: EmpStatus,
   });
 
+  // Fetch data functions
+  const fetchPendingLeads = async () => {
+    try {
+      const response = await axios.get(`${APi_Url}/digicoder/crm/api/v1/lead/pendingleads/${currentEmployeeId}`);
+      setPendingLeads(response.data.leads || []);
+    } catch (error) {
+      console.error("Error fetching pending leads:", error);
+      toast.error("Failed to fetch pending leads");
+    } finally {
+      setLoading(prev => ({ ...prev, pendingLeads: false }));
+    }
+  };
+
   const fetchAssignedLeads = async () => {
     try {
       const response = await axios.get(`${APi_Url}/digicoder/crm/api/v1/lead/empgetall/${currentEmployeeId}`);
       setAssignedLeads(response.data.leads || []);
+      setLoading(prev => ({ ...prev, tags: false })); // Tags data is ready when assigned leads are loaded
     } catch (error) {
       if (error.response && error.response.status === 404) {
         toast.warn("No Assigned leads found");
       } else {
         toast.error("Failed to fetch assigned leads");
       }
+      setLoading(prev => ({ ...prev, tags: false })); // Even if error, stop loading
+    } finally {
+      setLoading(prev => ({ ...prev, assignedLeads: false }));
     }
   };
 
@@ -76,33 +99,32 @@ function EmployeesFullPage() {
       setFollowUpData(response.data.followups || []);
     } catch (error) {
       console.error("Error fetching followups:", error);
+    } finally {
+      setLoading(prev => ({ ...prev, followups: false }));
     }
   };
 
+  // Calculate metrics
   const calculateReportMetrics = () => {
-    const today = new Date().toISOString().split('T')[0];
-
+    const today = new Date().toISOString().split('T')[0];  
     const totalAssigned = assignedLeads.length;
-    const closedLeads = assignedLeads.filter(lead => lead.closed === true && lead.negative === false && lead.deleted===false);
-    const negativeLeads = assignedLeads.filter(lead => lead.negative === true && lead.deleted===false  && lead.closed===false);
-    const todaysFollowups = followupData.filter(item => {
-      const createdDate = new Date(item.createdAt).toISOString().split('T')[0];
-      return createdDate === today;
-    }).length;
+    const closedLeads = assignedLeads.filter(lead => lead.closed && !lead.negative && !lead.deleted);
+    const negativeLeads = assignedLeads.filter(lead => lead.negative && !lead.deleted && !lead.closed);
+    const todaysFollowups = followupData.filter(item => 
+      new Date(item.createdAt).toISOString().split('T')[0] === today
+    ).length;
 
     const totalFollowups = followupData.length;
-    const pendingLeads = Math.max(0, totalAssigned - totalFollowups);
-    const leadsWithNoFollowups = assignedLeads.filter(lead => {
-      return !followupData.some(followup => followup.leadId === lead._id);
-    }).length;
+    const leadsWithNoFollowups = assignedLeads.filter(lead => 
+      !followupData.some(followup => followup.leadId === lead._id)
+    ).length;
 
     const uniqueTagNames = [
       ...new Set(
         assignedLeads
-          .map(item => item.tags || [])
-          .flat()
+          .flatMap(item => item.tags || [])
           .map(tag => tag?.tagName)
-          .filter(tagName => tagName)
+          .filter(Boolean)
       )
     ];
 
@@ -110,7 +132,7 @@ function EmployeesFullPage() {
       totalAssigned,
       closedLeads: closedLeads.length,
       negativeLeads: negativeLeads.length,
-      pendingLeads,
+      pendingLeads: pendingLeads.length,
       todaysFollowups,
       totalFollowups,
       leadsWithNoFollowups,
@@ -120,9 +142,10 @@ function EmployeesFullPage() {
 
   const reportMetrics = calculateReportMetrics();
 
+  // Event handlers
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prevData) => ({ ...prevData, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleUpdate = () => {
@@ -132,17 +155,17 @@ function EmployeesFullPage() {
 
   const handleSave = async () => {
     const EmployeeDataEdit = {
-      empName: formData.Name || "",
-      empPhoneNumber: formData.Phone || "",
-      empEmail: formData.Email || "",
-      empPassword: formData.Password || "",
-      empGender: formData.Gender || "",
-      empDOB: formData.DateOfBirth || "",
-      empDesignation: formData.Designation || "",
-      empCity: formData.City || "",
-      empState: formData.State || "",
-      empZipCode: formData.ZipCode || "",
-      empCountry: formData.Country || "",
+      empName: formData.Name,
+      empPhoneNumber: formData.Phone,
+      empEmail: formData.Email,
+      empPassword: formData.Password,
+      empGender: formData.Gender,
+      empDOB: formData.DateOfBirth,
+      empDesignation: formData.Designation,
+      empCity: formData.City,
+      empState: formData.State,
+      empZipCode: formData.ZipCode,
+      empCountry: formData.Country,
     };
 
     try {
@@ -156,10 +179,9 @@ function EmployeesFullPage() {
         toast.success("Updated successfully!");
         setIsEditing(false);
         setIsDisabled(true);
-        navigate('/employee')
+        navigate('/employee');
       }
     } catch (error) {
-      console.log(error);
       toast.error(error.response?.data?.message || "Failed to update data!");
     }
   };
@@ -193,7 +215,7 @@ function EmployeesFullPage() {
 
       if (response.status === 200) {
         toast.success(`${EmployeeData.empName} has been ${EmployeeData.blocked ? 'unblocked' : 'blocked'} successfully.`);
-        navigate('/employee')
+        navigate('/employee');
         setFormData(prev => ({ ...prev, Status: response.data.employee.blocked ? "Blocked" : "Active" }));
       }
     } catch (error) {
@@ -219,15 +241,21 @@ function EmployeesFullPage() {
     setFollowupsModalVisible(true);
   };
 
+  // Initial data fetch
   useEffect(() => {
-    fetchAssignedLeads();
-    fetchFollowUps();
-
     const tokenId = sessionStorage.getItem('Token');
-    if (!tokenId) {
-      navigate('/');
-    }
-  }, [dispatch, navigate]);
+    if (!tokenId) navigate('/');
+
+    const fetchData = async () => {
+      await Promise.all([
+        fetchAssignedLeads(),
+        fetchFollowUps(),
+        fetchPendingLeads()
+      ]);
+    };
+
+    fetchData();
+  }, [navigate]);
 
   const footerContent = (
     <div>
@@ -237,6 +265,13 @@ function EmployeesFullPage() {
         onClick={() => setVisible(false)}
         className="p-button-text"
       />
+    </div>
+  );
+
+  // Loading component
+  const LoadingIndicator = () => (
+    <div className="loading-indicator">
+      <CircularProgress size={24} />
     </div>
   );
 
@@ -252,7 +287,7 @@ function EmployeesFullPage() {
               <div className="fullLeads-icons">
                 <button
                   style={{ color: EmployeeData.blocked ? "green" : "red" }}
-                  onClick={() => handleBlock()}
+                  onClick={handleBlock}
                 >
                   <i className={EmployeeData.blocked ? "ri-user-unfollow-fill" : "ri-user-follow-fill"}></i>
                   {EmployeeData.blocked ? " Unblock" : " Block"}
@@ -260,6 +295,7 @@ function EmployeesFullPage() {
               </div>
             </div>
 
+            {/* Employee Details Section */}
             <div className="fullLeads-view-data">
               <div className="view-data-title">
                 <span>EMPLOYEE DETAILS</span>
@@ -421,6 +457,7 @@ function EmployeesFullPage() {
               </div>
             </div>
 
+            {/* Performance Report Section */}
             <div className="report-title">
               <span>EMPLOYEE PERFORMANCE REPORT</span>
               <div className="report-filter-buttons">
@@ -434,24 +471,26 @@ function EmployeesFullPage() {
             </div>
 
             <div className="report-grid">
+              {/* Assigned Leads Card */}
               <div className="report-card">
                 <div className="report-icon">
                   <AssignmentIndIcon style={{ fontSize: "40px", color: "#3f51b5" }} />
                 </div>
-                <div className="report-content" >
+                <div className="report-content">
                   <span>Assigned Leads</span>
-                  <p>{reportMetrics.totalAssigned}</p>
+                  {loading.assignedLeads ? <LoadingIndicator /> : <p>{reportMetrics.totalAssigned}</p>}
                   <small>Total leads assigned to this employee</small>
                 </div>
               </div>
 
+              {/* Closed Leads Card */}
               <div className="report-card success-card">
                 <div className="report-icon">
                   <CheckCircleIcon style={{ fontSize: "40px", color: "white" }} />
                 </div>
                 <div className="report-content">
                   <span>Closed Leads</span>
-                  <p>{reportMetrics.closedLeads}</p>
+                  {loading.assignedLeads ? <LoadingIndicator /> : <p>{reportMetrics.closedLeads}</p>}
                   <small>
                     {reportMetrics.totalAssigned > 0 ?
                       `${Math.round((reportMetrics.closedLeads / reportMetrics.totalAssigned) * 100)}% Success Rate` :
@@ -460,24 +499,26 @@ function EmployeesFullPage() {
                 </div>
               </div>
 
+              {/* Pending Leads Card */}
               <div className="report-card warning-card">
                 <div className="report-icon">
                   <PendingActionsIcon style={{ fontSize: "40px", color: "white" }} />
                 </div>
                 <div className="report-content">
                   <span>Pending Leads</span>
-                  <p>{reportMetrics.pendingLeads}</p>
-                  <small>{reportMetrics.leadsWithNoFollowups} need followup</small>
+                  {loading.pendingLeads ? <LoadingIndicator /> : <p>{reportMetrics.pendingLeads}</p>}
+                  <small>From API: {pendingLeads.length} pending leads</small>
                 </div>
               </div>
 
+              {/* Negative Leads Card */}
               <div className="report-card danger-card">
                 <div className="report-icon">
                   <CancelIcon style={{ fontSize: "40px", color: "white" }} />
                 </div>
                 <div className="report-content">
                   <span>Negative Leads</span>
-                  <p>{reportMetrics.negativeLeads}</p>
+                  {loading.assignedLeads ? <LoadingIndicator /> : <p>{reportMetrics.negativeLeads}</p>}
                   <small>
                     {reportMetrics.totalAssigned > 0 ?
                       `${Math.round((reportMetrics.negativeLeads / reportMetrics.totalAssigned) * 100)}% of total` :
@@ -486,24 +527,26 @@ function EmployeesFullPage() {
                 </div>
               </div>
 
+              {/* Today's Followups Card */}
               <div className="report-card info-card">
                 <div className="report-icon">
                   <TodayIcon style={{ fontSize: "40px", color: "white" }} />
                 </div>
                 <div className="report-content">
                   <span>Today's Followups</span>
-                  <p>{reportMetrics.todaysFollowups}</p>
+                  {loading.followups ? <LoadingIndicator /> : <p>{reportMetrics.todaysFollowups}</p>}
                   <small>{new Date().toLocaleDateString()}</small>
                 </div>
               </div>
 
+              {/* Total Followups Card */}
               <div className="report-card primary-card">
                 <div className="report-icon">
                   <WorkHistoryIcon style={{ fontSize: "40px", color: "white" }} />
                 </div>
                 <div className="report-content">
                   <span>Total Followups</span>
-                  <p>{reportMetrics.totalFollowups}</p>
+                  {loading.followups ? <LoadingIndicator /> : <p>{reportMetrics.totalFollowups}</p>}
                   <small>
                     Avg: {reportMetrics.totalAssigned > 0 ?
                       Math.round(reportMetrics.totalFollowups / reportMetrics.totalAssigned) : 0} per lead
@@ -521,6 +564,7 @@ function EmployeesFullPage() {
               </div>
             </div>
 
+            {/* Dialogs */}
             <Dialog
               className="AssignedTagsContainer"
               header={
@@ -532,10 +576,13 @@ function EmployeesFullPage() {
               visible={visible}
               onHide={() => setVisible(false)}
               footer={footerContent}
-                
             >
               <div className="tags-container">
-                {reportMetrics.uniqueTagNames.length > 0 ? (
+                {loading.tags ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
+                    <LoadingIndicator />
+                  </div>
+                ) : reportMetrics.uniqueTagNames.length > 0 ? (
                   reportMetrics.uniqueTagNames.map((tag, index) => (
                     <span key={index} className="tag-badge">
                       {tag}

@@ -10,18 +10,23 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import Swal from 'sweetalert2';
 
-function LeadStatus() {  
+function LeadStatus() {
   const [show, setShow] = useState(false);
-  const [statusText,setStatusText]=useState();
+  const [statusText, setStatusText] = useState('');
+  const [loading, setLoading] = useState(false);      // For page/table loader
+  const [btnLoading, setBtnLoading] = useState(false); // For Save button loader
+
   const APi_Url = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const LeadStatusData = useSelector((state) => state.leads.LeadStatus); 
-  
-  const handleClose = () => setShow(false);
+  const LeadStatusData = useSelector((state) => state.leads.LeadStatus);
+
+  const handleClose = () => {
+    setShow(false);
+    setStatusText('');
+  };
   const handleShow = () => setShow(true);
 
-  // Redirect if no token is present  
   useEffect(() => {
     const tokenId = sessionStorage.getItem('Token');
     if (!tokenId) {
@@ -29,43 +34,47 @@ function LeadStatus() {
     }
   }, [navigate]);
 
-  // Fetch data from the API when the component mounts
   useEffect(() => {
-     dispatch(fetchLeadStatus());
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        await dispatch(fetchLeadStatus());
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, [dispatch]);
-  const srNoTemplate = (rowData, { rowIndex }) => {
-    return <span>{rowIndex + 1}</span>;
-  };
 
+  const srNoTemplate = (rowData, { rowIndex }) => <span>{rowIndex + 1}</span>;
 
+  const handleSaveStatus = async () => {
+    if (!statusText.trim()) {
+      toast.error("Status text can't be empty");
+      return;
+    }
 
-  const handleSaveStatus=async()=>{
     try {
+      setBtnLoading(true);
       const AdminId = sessionStorage.getItem('AdminId');
-      console.log(AdminId);
       const userType = "Admin";
       const apiUrl = `${APi_Url}/digicoder/crm/api/v1/leadstatus/add/${AdminId}`;
-      // Sending POST request with priorityText
-      const response = await axios.post(apiUrl, { statusText, userType });
-      console.log(response);
 
-      toast.success('LeadStatus saved successfully');
+      await axios.post(apiUrl, { statusText, userType });
+
+      toast.success('Lead status saved successfully');
       setStatusText('');
       setShow(false);
-      dispatch(fetchLeadStatus()); // Refetch the priority data
-
+      await dispatch(fetchLeadStatus());
     } catch (error) {
-      toast.error('Error saving priority');
+      toast.error('Error saving lead status');
       console.error("Error details: ", error);
+    } finally {
+      setBtnLoading(false);
     }
-  }
+  };
 
-
-
-  
   const handleDelete = (rowData) => {
-    console.log(rowData);
-    
     Swal.fire({
       title: 'Are you sure?',
       text: "You won't be able to revert this!",
@@ -73,41 +82,38 @@ function LeadStatus() {
       showCancelButton: true,
       confirmButtonText: 'Yes, delete it!',
       cancelButtonText: 'Cancel'
-    }).then(async(result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
-        const apiUrl = `${APi_Url}/digicoder/crm/api/v1/leadstatus/delete/${rowData._id}`;
-        await axios.delete(apiUrl)
-          .then(() => {
-            
-            
-            toast.success('Data deleted successfully');
-            dispatch(fetchLeadStatus()); // Refetch after deletion
-          })
-          .catch((error) => {
-            console.log(error);
-            
-            toast.error('Error deleting data');
-          });
+        try {
+          setLoading(true);
+          const apiUrl = `${APi_Url}/digicoder/crm/api/v1/leadstatus/delete/${rowData._id}`;
+          await axios.delete(apiUrl);
+          toast.success('Lead status deleted successfully');
+          await dispatch(fetchLeadStatus());
+        } catch (error) {
+          console.error(error);
+          toast.error('Error deleting lead status');
+        } finally {
+          setLoading(false);
+        }
       }
     });
   };
 
-
-
-  const actionBodyTemplate = (rowData) => {
-    return (
-      <div>
-        <button
-          style={{
-            color: "red", backgroundColor: "transparent", border: "none", fontSize: "20px", cursor: "pointer"
-          }}
-          onClick={() => handleDelete(rowData)}
-        >
-          <i className="ri-delete-bin-5-fill"></i>
-        </button>
-      </div>
-    );
-  };
+  const actionBodyTemplate = (rowData) => (
+    <button
+      style={{
+        color: "red",
+        backgroundColor: "transparent",
+        border: "none",
+        fontSize: "20px",
+        cursor: "pointer"
+      }}
+      onClick={() => handleDelete(rowData)}
+    >
+      <i className="ri-delete-bin-5-fill"></i>
+    </button>
+  );
 
   return (
     <div>
@@ -119,21 +125,32 @@ function LeadStatus() {
                 <h1>Lead Status</h1>
                 <button
                   style={{
-                    border: "none", backgroundColor: "#3454D1", color: "white", fontSize: "18px", borderRadius: "10px", cursor: "pointer", padding: "0px 20px"
+                    border: "none",
+                    backgroundColor: "#3454D1",
+                    color: "white",
+                    fontSize: "18px",
+                    borderRadius: "10px",
+                    cursor: "pointer",
+                    padding: "0px 20px"
                   }}
                   onClick={handleShow}
                 >
                   Add New
                 </button>
               </div>
-              {Array.isArray(LeadStatusData) && LeadStatusData.length > 0 ? (
-              <DataTable value={LeadStatusData} stripedRows bordered>
-                <Column body={srNoTemplate} header="Sr. No." sortable></Column> 
-                <Column field="leadStatusText" header="Status" sortable></Column>
-                <Column header="Action" body={actionBodyTemplate}></Column>
-              </DataTable>
+
+              {loading ? (
+                <div className="loader-wrapper">
+                  <div className="custom-loader"></div>
+                </div>
+              ) : Array.isArray(LeadStatusData) && LeadStatusData.length > 0 ? (
+                <DataTable value={LeadStatusData} stripedRows bordered>
+                  <Column body={srNoTemplate} header="Sr. No." sortable />
+                  <Column field="leadStatusText" header="Status" sortable />
+                  <Column header="Action" body={actionBodyTemplate} />
+                </DataTable>
               ) : (
-                <div>No priority data available</div>
+                <div style={{ textAlign: 'center', padding: '20px' }}>No lead status data available</div>
               )}
 
               {/* Modal for Add New Lead Status */}
@@ -152,16 +169,31 @@ function LeadStatus() {
                       type="text"
                       placeholder="Enter status"
                       value={statusText}
-                      onChange={(e)=>setStatusText(e.target.value)}
+                      onChange={(e) => setStatusText(e.target.value)}
                       style={{ outline: "none", padding: "8px", width: "100%" }}
                     />
                     <button
+                      onClick={handleSaveStatus}
+                      disabled={btnLoading}
                       style={{
-                        marginLeft: "10px", padding: "10px 26px", border: "none", backgroundColor: "#3454D1", color: "white", fontSize: "20px"
+                        marginLeft: "10px",
+                        padding: "10px 26px",
+                        border: "none",
+                        backgroundColor: "#3454D1",
+                        color: "white",
+                        fontSize: "20px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        cursor: btnLoading ? "not-allowed" : "pointer",
+                        opacity: btnLoading ? 0.7 : 1
                       }}
-                      onClick={()=>handleSaveStatus()}
                     >
-                      Save
+                      {btnLoading ? (
+                        <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                      ) : (
+                        "Save"
+                      )}
                     </button>
                   </div>
                 </Modal.Body>
@@ -170,6 +202,47 @@ function LeadStatus() {
           </div>
         </div>
       </Dashboard>
+
+      {/* Loader Styles */}
+      <style>{`
+        .loader-wrapper {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          padding: 40px 0;
+        }
+
+        .custom-loader {
+          width: 60px;
+          height: 60px;
+          border: 6px solid #f3f3f3;
+          border-top: 6px solid #3454D1;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        .spinner-border {
+          display: inline-block;
+          width: 1rem;
+          height: 1rem;
+          vertical-align: text-bottom;
+          border: 0.15em solid currentColor;
+          border-right-color: transparent;
+          border-radius: 50%;
+          animation: spinner-border .75s linear infinite;
+        }
+
+        @keyframes spinner-border {
+          100% {
+            transform: rotate(360deg);
+          }
+        }
+      `}</style>
     </div>
   );
 }

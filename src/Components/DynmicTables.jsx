@@ -15,7 +15,8 @@ import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchTags } from '../Features/LeadSlice';
 
-export default function DynamicTable({ lead,
+export default function DynamicTable({
+    lead,
     tableTitle,
     onPageChange,
     first,
@@ -23,8 +24,7 @@ export default function DynamicTable({ lead,
     totalRecords,
     onEmployeeFilter,
     onTagsChange  
- }) {
-
+}) {
     const APi_Url = import.meta.env.VITE_API_URL;
     const [showModal, setShowModal] = useState(false);
     const dispatch = useDispatch();
@@ -35,6 +35,7 @@ export default function DynamicTable({ lead,
     const [assignedEmployees, setAssignedEmployees] = useState([]);
     const [selectedEmployeesToRemove, setSelectedEmployeesToRemove] = useState([]);
     const [selectedEmployeeFilter, setSelectedEmployeeFilter] = useState(null);
+    const [unassignLoading, setUnassignLoading] = useState(false); // New state for unassign loader
     
     useEffect(() => {
         dispatch(fetchTags());
@@ -72,16 +73,8 @@ export default function DynamicTable({ lead,
     };
 
     const [filters, setFilters] = useState(getInitialFilters());
-
     const [globalFilterValue, setGlobalFilterValue] = useState(localStorage.getItem('leadGlobalFilterValue') || '');
-
-    const getInitialSelectedTagValues = () => {
-        const savedTags = localStorage.getItem('leadSelectedTags');
-        return savedTags ? JSON.parse(savedTags) : [];
-    };
-
     const [selectedTagValues, setSelectedTagValues] = useState(getInitialSelectedTagValues());
-
     const [selectedRows, setSelectedRows] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [title, setTitle] = useState('');
@@ -93,6 +86,11 @@ export default function DynamicTable({ lead,
     const [rangeStart, setRangeStart] = useState();
     const [rangeEnd, setRangeEnd] = useState();
     const navigate = useNavigate();
+
+    function getInitialSelectedTagValues() {
+        const savedTags = localStorage.getItem('leadSelectedTags');
+        return savedTags ? JSON.parse(savedTags) : [];
+    }
 
     useEffect(() => {
         localStorage.setItem('leadTableFilters', JSON.stringify(filters));
@@ -122,22 +120,11 @@ export default function DynamicTable({ lead,
     
     useEffect(() => {
         if (onTagsChange) {
-          const tagIds = selectedTagValues.map(tag => {
-            // Find the corresponding tag object from tagData to get its ID
-            if (typeof tag === 'string') {
-              // If tag is a string (tagName), find the corresponding tag object to get its ID
-              const tagObject = tagData.find(t => t.tagName === tag);
-              return tagObject ? tagObject._id : tag;
-            } else if (tag.value) {
-              // If tag is an object with a value property (from MultiSelect)
-              const tagObject = tagData.find(t => t.tagName === tag.value);
-              return tagObject ? tagObject._id : tag.value;
-            } else {
-              // If tag is already an object with _id
-              return tag._id || tag;
-            }
-          });
-          onTagsChange(tagIds);
+            const tagIds = selectedTagValues.map(tag => {
+                const tagObject = tagData.find(t => t.tagName === tag);
+                return tagObject ? tagObject._id : tag;
+            });
+            onTagsChange(tagIds);
         }
     }, [selectedTagValues, tagData]);
 
@@ -179,7 +166,6 @@ export default function DynamicTable({ lead,
         }
 
         const employeesMap = new Map();
-
         selectedRows.forEach(lead => {
             if (lead.leadAssignedTo && Array.isArray(lead.leadAssignedTo)) {
                 lead.leadAssignedTo.forEach(emp => {
@@ -191,7 +177,6 @@ export default function DynamicTable({ lead,
         });
 
         const uniqueEmployees = Array.from(employeesMap.values());
-
         if (uniqueEmployees.length === 0) {
             toast.current.show({
                 severity: 'info',
@@ -211,11 +196,14 @@ export default function DynamicTable({ lead,
         const leadIds = selectedRows.map(lead => lead._id);
         const employeeIdsToRemove = selectedEmployeesToRemove;
         
+        setUnassignLoading(true); // Start loading
+        
         try {
             const response = await axios.put(`${APi_Url}/digicoder/crm/api/v1/lead/unassign`, {
                 leadIds,
                 employeeIdsToRemove
             });
+            
             if (response.status === 200) {
                 toast.current.show({
                     severity: 'success',
@@ -227,7 +215,6 @@ export default function DynamicTable({ lead,
                 setSelectedRows([]);
                 setSelectAll(false);
                 setUnassignModalOpen(false);
-
                 window.location.reload();
             }
         } catch (error) {
@@ -238,6 +225,8 @@ export default function DynamicTable({ lead,
                 detail: 'Failed to remove employees. Please try again.',
                 life: 3000
             });
+        } finally {
+            setUnassignLoading(false); // Stop loading regardless of outcome
         }
     };
 
@@ -246,11 +235,9 @@ export default function DynamicTable({ lead,
         if (selectedEmployeeFilter) {
             filteredByGlobal = filteredByGlobal.filter(item => {
                 if (!item.leadAssignedTo) return false;
-
                 if (Array.isArray(item.leadAssignedTo)) {
                     return item.leadAssignedTo.some(emp => emp._id === selectedEmployeeFilter);
                 }
-
                 return item.leadAssignedTo._id === selectedEmployeeFilter;
             });
         }
@@ -280,7 +267,6 @@ export default function DynamicTable({ lead,
         if (selectedTagValues.length > 0) {
             filteredByTags = filteredByGlobal.filter(item => {
                 if (!item.tags || !Array.isArray(item.tags)) return false;
-
                 return selectedTagValues.every(selectedTag => {
                     return item.tags.some(tag => {
                         if (typeof tag === 'string') {
@@ -349,19 +335,16 @@ export default function DynamicTable({ lead,
         });
     };
     
-    // New handler for row click selection
     const handleRowClick = (e) => {
         const rowData = e.data;
         const isSelected = selectedRows.some(row => row._id === rowData._id);
         
         if (isSelected) {
-            // If row is already selected, deselect it
             setSelectedRows(selectedRows.filter(row => row._id !== rowData._id));
             if (selectAll) {
                 setSelectAll(false);
             }
         } else {
-            // If row is not selected, select it
             setSelectedRows([...selectedRows, rowData]);
         }
     };
@@ -440,22 +423,31 @@ export default function DynamicTable({ lead,
     const actionBodyTemplate = (rowData) => {
         return (
             <div className="flex justify-content-around gap-3">
-                <button onClick={(e) => {
-                    e.stopPropagation(); // Prevent row selection when clicking action buttons
-                    handleEdit(rowData);
-                }} style={{ borderRadius: "50%", border: "none", height: "40px", width: "40px", backgroundColor: "#EDF1FF", color: "#3454D1" }}>
+                <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(rowData);
+                    }} 
+                    style={{ borderRadius: "50%", border: "none", height: "40px", width: "40px", backgroundColor: "#EDF1FF", color: "#3454D1" }}
+                >
                     <i className="ri-edit-box-fill"></i>
                 </button>
-                <button onClick={(e) => {
-                    e.stopPropagation(); // Prevent row selection when clicking action buttons
-                    handleDelete(rowData);
-                }} style={{ borderRadius: "50%", border: "none", height: "40px", width: "40px", backgroundColor: "#EDF1FF", color: "red" }}>
+                <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(rowData);
+                    }} 
+                    style={{ borderRadius: "50%", border: "none", height: "40px", width: "40px", backgroundColor: "#EDF1FF", color: "red" }}
+                >
                     <i className="ri-delete-bin-5-fill"></i>
                 </button>
-                <button onClick={(e) => {
-                    e.stopPropagation(); // Prevent row selection when clicking action buttons
-                    handleView(rowData);
-                }} style={{ borderRadius: "50%", border: "none", height: "40px", width: "40px", backgroundColor: "#EDF1FF", color: "#3454D1", fontWeight: "bold" }}>
+                <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleView(rowData);
+                    }} 
+                    style={{ borderRadius: "50%", border: "none", height: "40px", width: "40px", backgroundColor: "#EDF1FF", color: "#3454D1", fontWeight: "bold" }}
+                >
                     <i className="ri-eye-line"></i>
                 </button>
             </div>
@@ -464,16 +456,19 @@ export default function DynamicTable({ lead,
 
     const handleShow = () => {
         if (selectedRows.length === 0) {
-            toast.current.show({ severity: 'warn', summary: 'Warning', detail: 'Please select at least one row before assigning.', life: 3000 });
+            toast.current.show({ 
+                severity: 'warn', 
+                summary: 'Warning', 
+                detail: 'Please select at least one row before assigning.', 
+                life: 3000 
+            });
         } else {
             setShowModal(true);
         }
     };
 
     const handleClose = () => setShowModal(false);
-    const closeModal = () => {
-        setIsModalOpen(false);
-    };
+    const closeModal = () => setIsModalOpen(false);
 
     const handleEdit = (rowData) => {
         const viewdata = rowData;
@@ -497,12 +492,22 @@ export default function DynamicTable({ lead,
                     if (response.status === 200) {
                         const updatedLeads = leadData.filter((item) => item._id !== rowData._id);
                         setLeadData(updatedLeads);
-                        toast.current.show({ severity: 'success', summary: 'Success', detail: 'Lead deleted successfully!', life: 3000 });
+                        toast.current.show({ 
+                            severity: 'success', 
+                            summary: 'Success', 
+                            detail: 'Lead deleted successfully!', 
+                            life: 3000 
+                        });
                         window.location.reload();
                     }
                 } catch (error) {
                     console.error("Error deleting lead:", error);
-                    toast.current.show({ severity: 'warn', summary: 'Warning', detail: 'There was an error deleting the lead.', life: 3000 });
+                    toast.current.show({ 
+                        severity: 'warn', 
+                        summary: 'Warning', 
+                        detail: 'There was an error deleting the lead.', 
+                        life: 3000 
+                    });
                 }
             }
         });
@@ -528,11 +533,7 @@ export default function DynamicTable({ lead,
     };
 
     const header = renderHeader();
-
-    // Custom row class to indicate selected rows
-    const rowClassName = (data) => {
-        return selectedRows.some(row => row._id === data._id) ? 'selected-row' : '';
-    };
+    const rowClassName = (data) => selectedRows.some(row => row._id === data._id) ? 'selected-row' : '';
 
     const Loader = () => (
         <div className="loader-container" style={{
@@ -555,13 +556,9 @@ export default function DynamicTable({ lead,
                     0% { transform: rotate(0deg); }
                     100% { transform: rotate(360deg); }
                 }
-                
-                /* Add custom style for selected rows */
                 .selected-row {
                     background-color: #e6f7ff !important;
                 }
-                
-                /* Make the rows clickable with a pointer cursor */
                 .p-datatable .p-datatable-tbody > tr {
                     cursor: pointer;
                 }
@@ -621,7 +618,7 @@ export default function DynamicTable({ lead,
                                     type="checkbox"
                                     checked={selectedRows.some(row => row._id === rowData._id)}
                                     onChange={(e) => {
-                                        e.stopPropagation(); // Prevent row click when clicking checkbox
+                                        e.stopPropagation();
                                         handleCheckboxChange(e, rowData);
                                     }}
                                     onClick={(e) => e.stopPropagation()}
@@ -636,20 +633,14 @@ export default function DynamicTable({ lead,
                     <Column field="phone" header="PHONE" sortable style={{ width: '15%' }} />
                     <Column
                         header="PRIORITY"
-                        body={(rowData) => {
-                            if (!rowData.priority) return "NA";
-                            return rowData?.priority?.priorityText || "NA";
-                        }}
+                        body={(rowData) => rowData?.priority?.priorityText || "NA"}
                         sortable
                         style={{ width: '10%', textAlign: "center" }}
                     />
 
                     <Column
                         header="Sources"
-                        body={(rowData) => {
-                            if (!rowData.sources) return "NA";
-                            return rowData?.sources?.leadSourcesText || "NA";
-                        }}
+                        body={(rowData) => rowData?.sources?.leadSourcesText || "NA"}
                         sortable
                         style={{ width: '10%' }}
                     />
@@ -658,19 +649,15 @@ export default function DynamicTable({ lead,
                         header="Assigned TO"
                         body={(rowData) => {
                             if (!rowData.leadAssignedTo) return "NA";
-
                             if (Array.isArray(rowData.leadAssignedTo)) {
                                 const validNames = rowData.leadAssignedTo
                                     .map(emp => emp.empName)
                                     .filter(name => name);
-
                                 if (validNames.length <= 2) {
                                     return validNames.join(", ") || "NA";
-                                } else {
-                                    return `${validNames[0]}, ${validNames[1]}.....`;
                                 }
+                                return `${validNames[0]}, ${validNames[1]}.....`;
                             }
-
                             return rowData.leadAssignedTo.empName || "NA";
                         }}
                         style={{ width: '15%' }}
@@ -814,74 +801,90 @@ export default function DynamicTable({ lead,
                                             setSelectedEmployeesToRemove(prev =>
                                                 prev.includes(employee._id)
                                                     ? prev.filter(id => id !== employee._id)
-                                                    : [...prev, employee._id]);
-                                                }}
-                                                style={{
-                                                    marginRight: '10px',
-                                                    cursor: 'pointer'
-                                                }}
-                                            />
-                                            <div>
-                                                <div style={{ fontWeight: '500' }}>{employee.empName}</div>
-                                                <div style={{ fontSize: '0.8rem', color: '#666' }}>
-                                                    {employee.designation || 'No designation specified'}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-        
-                                <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    marginTop: '15px'
-                                }}>
+                                                    : [...prev, employee._id]
+                                            );
+                                        }}
+                                        style={{
+                                            marginRight: '10px',
+                                            cursor: 'pointer'
+                                        }}
+                                    />
                                     <div>
-                                        {selectedEmployeesToRemove.length > 0 && (
-                                            <span style={{ color: '#666' }}>
-                                                {selectedEmployeesToRemove.length} employee(s) selected
-                                            </span>
-                                        )}
-                                    </div>
-        
-                                    <div style={{ display: 'flex', gap: '10px' }}>
-                                        <button
-                                            onClick={() => setUnassignModalOpen(false)}
-                                            style={{
-                                                padding: '8px 16px',
-                                                border: '1px solid #ddd',
-                                                borderRadius: '4px',
-                                                backgroundColor: 'white',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            Cancel
-                                        </button>
-        
-                                        {selectedEmployeesToRemove.length > 0 && (
-                                            <button
-                                                onClick={confirmUnassignSelected}
-                                                style={{
-                                                    padding: '8px 16px',
-                                                    border: 'none',
-                                                    borderRadius: '4px',
-                                                    backgroundColor: '#FF5A5F',
-                                                    color: 'white',
-                                                    cursor: 'pointer'
-                                                }}
-                                            >
-                                                Remove Selected
-                                            </button>
-                                        )}
+                                        <div style={{ fontWeight: '500' }}>{employee.empName}</div>
+                                        <div style={{ fontSize: '0.8rem', color: '#666' }}>
+                                            {employee.designation || 'No designation specified'}
+                                        </div>
                                     </div>
                                 </div>
+                            ))}
+                        </div>
+
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginTop: '15px'
+                        }}>
+                            <div>
+                                {selectedEmployeesToRemove.length > 0 && (
+                                    <span style={{ color: '#666' }}>
+                                        {selectedEmployeesToRemove.length} employee(s) selected
+                                    </span>
+                                )}
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <button
+                                    onClick={() => setUnassignModalOpen(false)}
+                                    style={{
+                                        padding: '8px 16px',
+                                        border: '1px solid #ddd',
+                                        borderRadius: '4px',
+                                        backgroundColor: 'white',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+
+                                {selectedEmployeesToRemove.length > 0 && (
+                                    <button
+                                        onClick={confirmUnassignSelected}
+                                        disabled={unassignLoading}
+                                        style={{
+                                            padding: '8px 16px',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            backgroundColor: '#FF5A5F',
+                                            color: 'white',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            opacity: unassignLoading ? 0.7 : 1
+                                        }}
+                                    >
+                                        {unassignLoading && (
+                                            <span className="spinner" style={{
+                                                border: '2px solid rgba(255,255,255,0.3)',
+                                                borderRadius: '50%',
+                                                borderTop: '2px solid white',
+                                                width: '16px',
+                                                height: '16px',
+                                                animation: 'spin 1s linear infinite'
+                                            }}></span>
+                                        )}
+                                        Remove Selected
+                                    </button>
+                                )}
                             </div>
                         </div>
-                    )}
-        
-                    <Modal isOpen={isModalOpen} onClose={closeModal} title={title} buttonTitle={buttonTitle} leadData={leadData} />
-                    <AssignTaskModal show={showModal} handleClose={handleClose} employees={employeeData} selectedData={selectedRows} />
+                    </div>
                 </div>
-            );
-        }
+            )}
+
+            <Modal isOpen={isModalOpen} onClose={closeModal} title={title} buttonTitle={buttonTitle} leadData={leadData} />
+            <AssignTaskModal show={showModal} handleClose={handleClose} employees={employeeData} selectedData={selectedRows} />
+        </div>
+    );
+}

@@ -113,18 +113,18 @@ function MainDashboard() {
   }, [navigate]);
 
   const actionCards = [
-    {
-      title: 'Add Lead',
-      icon: 'ri-user-add-line',
-      route: '/addLead',
-      color: '#4CAF50'
-    },
-    {
-      title: 'Import Leads',
-      icon: 'ri-download-line',
-      route: '/importLeads',
-      color: '#2196F3'
-    }
+    // {
+    //   title: 'Add Lead',
+    //   icon: 'ri-user-add-line',
+    //   route: '/addLead',
+    //   color: '#4CAF50'
+    // },
+    // {
+    //   title: 'Import Leads',
+    //   icon: 'ri-download-line',
+    //   route: '/importLeads',
+    //   color: '#2196F3'
+    // }
   ];
 
   const metrics = [
