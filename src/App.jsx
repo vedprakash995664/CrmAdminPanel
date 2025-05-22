@@ -19,6 +19,8 @@ import EmployeeCardView from './Pages/EmployeeCardView'
 import EmployeesFullPage from './Pages/EmployeesFullPage';
 import ExportNumbers from './Pages/ExportNumbers';
 
+import PasswordResetPage from './Components/PasswordResetPage';
+
 function App() {
 
 
@@ -28,6 +30,7 @@ function App() {
         <Routes>
           <Route path='/' element={<Login/>}/>
           <Route path='/dashboard' element={<AdminDashboard/>}/>
+          <Route path='/forget-password' element={<PasswordResetPage/>}/>
           <Route path='/leads' element={<Leads/>}/>
           <Route path='/assignedLeads' element={<AssignedLead/>}/>
           <Route path='/unassignedLeads' element={<UnassignedLead/>}/>
