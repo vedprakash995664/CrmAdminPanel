@@ -13,8 +13,8 @@ import Swal from 'sweetalert2';
 function LeadStatus() {
   const [show, setShow] = useState(false);
   const [statusText, setStatusText] = useState('');
-  const [loading, setLoading] = useState(false);      // For page/table loader
-  const [btnLoading, setBtnLoading] = useState(false); // For Save button loader
+  const [loading, setLoading] = useState(false);     
+  const [btnLoading, setBtnLoading] = useState(false);
 
   const APi_Url = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();

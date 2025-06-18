@@ -41,7 +41,7 @@ function Leads() {
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [first, setFirst] = useState(0);
-  const [rows, setRows] = useState(100);
+  const [rows, setRows] = useState(200);
   const [totalRecords, setTotalRecords] = useState(0); 
 
   // Form state
@@ -77,7 +77,7 @@ function Leads() {
 
   // Derived data
   const filteredLead = leads.filter(item => !item.deleted) || [];
-  const deletedLead = Deletedleads
+  const deletedLead = Deletedleads;
   const tableTitle = 'Leads';
 
   // Dropdown options

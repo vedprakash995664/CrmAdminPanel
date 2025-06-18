@@ -139,7 +139,10 @@ function EmployeesFullPage() {
       uniqueTagNames
     };
   };
-
+useEffect(()=>{
+  console.log("FollowUps",followupsForDate);
+  
+})
   const reportMetrics = calculateReportMetrics();
 
   // Event handlers
@@ -240,6 +243,10 @@ function EmployeesFullPage() {
     setFollowupsForDate(filtered);
     setFollowupsModalVisible(true);
   };
+const handleOpenLeads = (followupsForDate) => {
+  console.log(followupsForDate);
+  navigate('/dateWiseFilter', { state: { followups: followupsForDate } });
+};
 
   // Initial data fetch
   useEffect(() => {
@@ -619,8 +626,9 @@ function EmployeesFullPage() {
               <div className="followups-results">
                 {followupsForDate.length > 0 ? (
                   <>
-                    <div className="total-followups">
+                    <div className="total-followups d-flex gap-5">
                       <h3>Total Followups: {followupsForDate.length}</h3>
+                      <button onClick={()=>handleOpenLeads(followupsForDate)}>Open Leads</button>
                     </div>
                   </>
                 ) : (

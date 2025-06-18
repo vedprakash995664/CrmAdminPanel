@@ -20,6 +20,7 @@ import EmployeesFullPage from './Pages/EmployeesFullPage';
 import ExportNumbers from './Pages/ExportNumbers';
 
 import PasswordResetPage from './Components/PasswordResetPage';
+import DateWiseTable from './Pages/DateWiseTable';
 
 function App() {
 
@@ -38,7 +39,7 @@ function App() {
           <Route  path='/profile' element={<Profile/>}/>
           <Route  path='/exportNumbers' element={<ExportNumbers/>}/>
           <Route  path='/employee/employeefullpage' element={<EmployeesFullPage/>}/>
-
+          <Route path='/dateWiseFilter' element={<DateWiseTable/>}/>
           <Route path='/card' element={<DynamicCard/>}/>
           <Route path='/cardd' element={<EmployeeCardView/>}/>
 
