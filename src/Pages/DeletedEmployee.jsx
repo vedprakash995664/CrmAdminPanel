@@ -13,7 +13,7 @@ function DeletedEmployee() {
     const APi_Url = import.meta.env.VITE_API_URL;
     const [globalFilterValue, setGlobalFilterValue] = useState('');
     const [first, setFirst] = useState(0);
-    const [rows, setRows] = useState(5);
+    const [rows, setRows] = useState(20);
     const [data, setData] = useState([]);
     const toast = useRef(null);
     const navigate = useNavigate();

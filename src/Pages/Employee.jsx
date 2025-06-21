@@ -21,7 +21,7 @@ function Employee() {
     const [searchValue, setSearchValue] = useState('');
     const [lazyState, setLazyState] = useState({
         first: 0,
-        rows: 5,
+        rows: 20,
         page: 1,
         totalRecords: 0
     });
@@ -46,6 +46,18 @@ function Employee() {
     const toast = useRef(null);
     const dispatch = useDispatch();
     const navigate = useNavigate();
+
+    // Format date with timezone
+    const formatDateWithTimezone = (dateString) => {
+        if (!dateString) return '';
+        
+        const date = new Date(dateString);
+        return date.toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+        });
+    };
 
     // Load employees with pagination and search
     const loadEmployees = async () => {
@@ -320,10 +332,14 @@ function Employee() {
                             style={{ borderRadius: "10px" }}
                         >
                             <Column header="SR No" body={serialNumberTemplate} style={{ width: '10%' }} />
-                            <Column field="empName" header="Name" style={{ width: '35%' }} />
-                            <Column field="empPhoneNumber" header="Phone" style={{ width: '25%' }} />
+                            <Column field="empName" header="Name" style={{ width: '20%' }} />
+                            <Column field="empPhoneNumber" header="Phone" style={{ width: '20%' }} />
                             <Column field="empEmail" header="Email" style={{ width: '20%' }} />
-                            <Column field="createdAt" header="Date Of Joining" style={{ width: '20%' }} />
+                            <Column 
+                                header="Date Of Joining" 
+                                body={(rowData) => formatDateWithTimezone(rowData.createdAt)}
+                                style={{ width: '20%' }} 
+                            />
                             <Column header="ACTION" body={actionBodyTemplate} style={{ width: '10%' }} />
                         </DataTable>
                     </div>
