@@ -21,6 +21,7 @@ import ExportNumbers from './Pages/ExportNumbers';
 
 import PasswordResetPage from './Components/PasswordResetPage';
 import DateWiseTable from './Pages/DateWiseTable';
+import Searching from './Pages/Searching';
 
 function App() {
 
@@ -42,6 +43,7 @@ function App() {
           <Route path='/dateWiseFilter' element={<DateWiseTable/>}/>
           <Route path='/card' element={<DynamicCard/>}/>
           <Route path='/cardd' element={<EmployeeCardView/>}/>
+          <Route path='/search' element={<Searching/>}/>
 
 
           <Route  path='/priority' element={<Priority/>}/>

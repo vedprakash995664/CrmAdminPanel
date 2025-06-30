@@ -68,7 +68,6 @@ function Leads() {
     try {
         const response = await axios.get(`${APi_Url}/digicoder/crm/api/v1/lead/getDeletedall/${AdminId}`);
             setDeletedLeads(response.data.leads)
-            // console.log(response)
     } catch (error) {
         // console.error("Error fetching deleted leads:", error);
     }
@@ -162,6 +161,9 @@ function Leads() {
       if (response.data?.success) {
         setLeads(response.data.leads);
         setTotalRecords(response.data.totalLeads); 
+        console.log('====================================')
+        console.log(response.data.leads)
+        console.log('====================================')
       } else {
         setLeads([]);
         setTotalRecords(0);

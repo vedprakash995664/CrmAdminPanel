@@ -80,6 +80,13 @@ const Dashboard = ({ children, active }) => {
               </button>
             </li>
           </Link>
+          <Link className="navigation-link" to="/search">
+            <li>
+              <button className={`sidebar-link ${active === 'leads' && 'active'}`}>
+                <i className="ri-information-2-fill"></i> Search Leads
+              </button>
+            </li>
+          </Link>
           <Link className="navigation-link" to="/assignedLeads">
             <li>
               <button className={`sidebar-link ${active === 'assigned' && 'active'}`}>
