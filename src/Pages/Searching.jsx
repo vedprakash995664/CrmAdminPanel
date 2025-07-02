@@ -23,7 +23,7 @@ export default function Searching() {
   };
 
   return (
-    <Dashboard active='search'>
+    <Dashboard active={'search'}>
     <div className="search-container">
       <h2>🔍 Search Leads</h2>
 
